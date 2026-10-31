@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Menu.File" xml:space="preserve"><value>Dosya</value></data>
+  <data name="Menu.Edit" xml:space="preserve"><value>Düzen</value></data>
+  <data name="Menu.Format" xml:space="preserve"><value>Biçim</value></data>
+  <data name="Menu.Insert" xml:space="preserve"><value>Ekle</value></data>
+  <data name="Menu.Tools" xml:space="preserve"><value>Araçlar</value></data>
+  <data name="Menu.Document" xml:space="preserve"><value>Belge</value></data>
+  <data name="Menu.Book" xml:space="preserve"><value>Kitap</value></data>
+  <data name="Menu.View" xml:space="preserve"><value>Görünüm</value></data>
+  <data name="Menu.Help" xml:space="preserve"><value>Yardım</value></data>
+  <data name="File.New" xml:space="preserve"><value>Yeni EPUB</value></data>
+  <data name="File.Recent" xml:space="preserve"><value>Son açılanlar</value></data>
+  <data name="File.Backup" xml:space="preserve"><value>Kaydetmeden önce yedekle (.bak)</value></data>
+  <data name="File.Open" xml:space="preserve"><value>Aç...</value></data>
+  <data name="File.Save" xml:space="preserve"><value>Kaydet</value></data>
+  <data name="File.SaveAs" xml:space="preserve"><value>Farklı Kaydet...</value></data>
+  <data name="File.Exit" xml:space="preserve"><value>Çıkış</value></data>
+  <data name="Action.Undo" xml:space="preserve"><value>Geri Al</value></data>
+  <data name="Action.Redo" xml:space="preserve"><value>Yinele</value></data>
+  <data name="Action.SelectAll" xml:space="preserve"><value>Tümünü Seç</value></data>
+  <data name="Panel.Organizer" xml:space="preserve"><value>DÜZENLEYİCİ</value></data>
+  <data name="Panel.Control" xml:space="preserve"><value>KONTROL PANELİ</value></data>
+  <data name="Panel.Palette" xml:space="preserve"><value>PALET</value></data>
+  <data name="Panel.Content" xml:space="preserve"><value>Content</value></data>
+  <data name="Tab.Projects" xml:space="preserve"><value>Projeler</value></data>
+  <data name="Tab.Favorites" xml:space="preserve"><value>Sık Kullanılanlar</value></data>
+  <data name="Tab.Explorer" xml:space="preserve"><value>Gezgin</value></data>
+  <data name="Tab.Build" xml:space="preserve"><value>Derle</value></data>
+  <data name="Tab.Files" xml:space="preserve"><value>Dosyalar</value></data>
+  <data name="Tab.Tools" xml:space="preserve"><value>Araçlar</value></data>
+  <data name="Tab.Styles" xml:space="preserve"><value>Stiller</value></data>
+  <data name="Tab.Objects" xml:space="preserve"><value>Nesneler</value></data>
+  <data name="Tab.Inspector" xml:space="preserve"><value>Denetçi</value></data>
+  <data name="Editor.OpenTitle" xml:space="preserve"><value>EPUB kitabınızı açın</value></data>
+  <data name="Editor.DropHint" xml:space="preserve"><value>Bir EPUB dosyası seçin ya da dosyayı bu pencereye bırakın.</value></data>
+  <data name="Toolbar.New" xml:space="preserve"><value>Yeni</value></data>
+  <data name="Toolbar.Open" xml:space="preserve"><value>Aç</value></data>
+  <data name="Toolbar.Save" xml:space="preserve"><value>Kaydet</value></data>
+  <data name="Toolbar.Search" xml:space="preserve"><value>Ara...</value></data>
+  <data name="Tools.Formatting" xml:space="preserve"><value>Biçimlendirme</value></data>
+  <data name="Tools.Alignment" xml:space="preserve"><value>Hizalama</value></data>
+  <data name="Tools.Editing" xml:space="preserve"><value>Düzenleme</value></data>
+  <data name="Tools.Font" xml:space="preserve"><value>Yazı tipi</value></data>
+  <data name="View.LeftPanel" xml:space="preserve"><value>Düzenleyici paneli</value></data>
+  <data name="View.RightPanel" xml:space="preserve"><value>Palet paneli</value></data>
+  <data name="View.DarkTheme" xml:space="preserve"><value>Koyu tema</value></data>
+  <data name="Control.Check" xml:space="preserve"><value>Denetle</value></data>
+  <data name="Control.Launch" xml:space="preserve"><value>Başlat</value></data>
+  <data name="Control.Save" xml:space="preserve"><value>Derle / Kaydet</value></data>
+  <data name="Format.Normal" xml:space="preserve"><value>Normal</value></data>
+  <data name="Format.Paragraph" xml:space="preserve"><value>Paragraf</value></data>
+  <data name="Format.Heading1" xml:space="preserve"><value>Başlık 1</value></data>
+  <data name="Format.Heading2" xml:space="preserve"><value>Başlık 2</value></data>
+  <data name="Format.Heading3" xml:space="preserve"><value>Başlık 3</value></data>
+  <data name="Format.Heading4" xml:space="preserve"><value>Başlık 4</value></data>
+  <data name="Format.Heading5" xml:space="preserve"><value>Başlık 5</value></data>
+  <data name="Format.Heading6" xml:space="preserve"><value>Başlık 6</value></data>
+  <data name="Format.Quote" xml:space="preserve"><value>Alıntı</value></data>
+  <data name="Format.Bullets" xml:space="preserve"><value>• Liste</value></data>
+  <data name="Format.Numbering" xml:space="preserve"><value>1. Liste</value></data>
+  <data name="Format.Clear" xml:space="preserve"><value>Temizle</value></data>
+  <data name="Format.Left" xml:space="preserve"><value>Sol</value></data>
+  <data name="Format.Center" xml:space="preserve"><value>Orta</value></data>
+  <data name="Format.Right" xml:space="preserve"><value>Sağ</value></data>
+  <data name="Format.Justify" xml:space="preserve"><value>İki yana</value></data>
+  <data name="Format.Indent" xml:space="preserve"><value>Girinti artır</value></data>
+  <data name="Format.Outdent" xml:space="preserve"><value>Girinti azalt</value></data>
+  <data name="Format.Strike" xml:space="preserve"><value>Üstü çizili</value></data>
+  <data name="Format.Superscript" xml:space="preserve"><value>Üst simge</value></data>
+  <data name="Format.Subscript" xml:space="preserve"><value>Alt simge</value></data>
+  <data name="Tools.Objects" xml:space="preserve"><value>Nesneler</value></data>
+  <data name="Tools.Colors" xml:space="preserve"><value>Renkler</value></data>
+  <data name="Tools.Find" xml:space="preserve"><value>Bul</value></data>
+  <data name="Tools.Replace" xml:space="preserve"><value>Değiştir</value></data>
+  <data name="Tools.Cut" xml:space="preserve"><value>Kes</value></data>
+  <data name="Tools.Copy" xml:space="preserve"><value>Kopyala</value></data>
+  <data name="Tools.Paste" xml:space="preserve"><value>Yapıştır</value></data>
+  <data name="Tools.Image" xml:space="preserve"><value>Resim</value></data>
+  <data name="Tools.Link" xml:space="preserve"><value>Bağlantı</value></data>
+  <data name="Tools.HorizontalRule" xml:space="preserve"><value>Yatay çizgi</value></data>
+  <data name="Tools.Table" xml:space="preserve"><value>Tablo</value></data>
+  <data name="Tools.FontSize" xml:space="preserve"><value>Yazı boyutu</value></data>
+  <data name="Editor.WebViewTitle" xml:space="preserve"><value>WebView2 Runtime gerekli</value></data>
+  <data name="Editor.WebViewHint" xml:space="preserve"><value>WYSIWYG düzenleyicinin çalışması için Microsoft Edge WebView2 Runtime kurulu olmalıdır. Kurulumdan sonra programı yeniden başlatın.</value></data>
+  <data name="Editor.WebViewDownload" xml:space="preserve"><value>WebView2 Runtime'ı indir</value></data>
+  <data name="Editor.InvisibleCharacters" xml:space="preserve"><value>Görünmez karakterler</value></data>
+  <data name="Editor.Dirty" xml:space="preserve"><value>● Değişiklik var</value></data>
+  <data name="Tree.Rename" xml:space="preserve"><value>Bölümü yeniden adlandır...</value></data>
+  <data name="Tree.Delete" xml:space="preserve"><value>Bölümü sil</value></data>
+  <data name="Tree.RenamePrompt" xml:space="preserve"><value>Yeni bölüm başlığı:</value></data>
+  <data name="Tree.RenameTitle" xml:space="preserve"><value>Bölümü Yeniden Adlandır</value></data>
+  <data name="Tree.DeletePrompt" xml:space="preserve"><value>'{0}' bölümü silinsin mi?</value></data>
+  <data name="Tree.DeleteTitle" xml:space="preserve"><value>Bölümü Sil</value></data>
+  <data name="Unsaved.Prompt" xml:space="preserve"><value>Kaydedilmemiş değişiklikler var. Kaydetmek ister misiniz?</value></data>
+  <data name="Unsaved.Title" xml:space="preserve"><value>Kaydedilmemiş değişiklikler</value></data>
+  <data name="Errors.AppTitle" xml:space="preserve"><value>Uygulama hatası</value></data>
+  <data name="Errors.App" xml:space="preserve"><value>Beklenmeyen bir hata oluştu. Ayrıntılar uygulama günlüklerine yazıldı.</value></data>
+  <data name="Errors.EmptyRecent" xml:space="preserve"><value>Liste boş</value></data>
+  <data name="Errors.Help" xml:space="preserve"><value>EPUB Atölyesi&#10;EPUB kitaplarını ve bölüm içeriklerini düzenleyin.</value></data>
+  <data name="Errors.HelpTitle" xml:space="preserve"><value>Yardım</value></data>
+  <data name="Tools.LinkPrompt" xml:space="preserve"><value>Bağlantı adresi (https://, http:// veya mailto:):</value></data>
+  <data name="Tools.FindPrompt" xml:space="preserve"><value>Aranacak metin:</value></data>
+  <data name="Tools.FindTitle" xml:space="preserve"><value>Kitapta Bul</value></data>
+  <data name="Tools.ReplaceOldPrompt" xml:space="preserve"><value>Bulunacak metin:</value></data>
+  <data name="Tools.ReplaceNewPrompt" xml:space="preserve"><value>Yeni metin:</value></data>
+  <data name="Tools.ReplaceTitle" xml:space="preserve"><value>Bul ve Değiştir</value></data>
+  <data name="Tools.TextColor" xml:space="preserve"><value>Metin rengi</value></data>
+  <data name="Tools.HighlightColor" xml:space="preserve"><value>Vurgu rengi</value></data>
+  <data name="Tools.Black" xml:space="preserve"><value>Siyah</value></data>
+  <data name="Tools.Red" xml:space="preserve"><value>Kırmızı</value></data>
+  <data name="Tools.Blue" xml:space="preserve"><value>Mavi</value></data>
+  <data name="Tools.Green" xml:space="preserve"><value>Yeşil</value></data>
+  <data name="Tools.Yellow" xml:space="preserve"><value>Sarı</value></data>
+  <data name="Tools.CleanPaste" xml:space="preserve"><value>Temizleyerek yapıştır</value></data>
+  <data name="Tools.ImageDialog" xml:space="preserve"><value>Kitaba eklenecek resmi seçin</value></data>
+  <data name="Tools.ImagesFilter" xml:space="preserve"><value>Resimler|*.png;*.jpg;*.jpeg;*.gif;*.svg;*.webp</value></data>
+  <data name="Tools.SectionRequired" xml:space="preserve"><value>Önce bir kitap ve bölüm açın.</value></data>
+  <data name="Tools.ImageError" xml:space="preserve"><value>Resim eklenemedi: {0}</value></data>
+  <data name="Tools.EditorCommandError" xml:space="preserve"><value>Komut uygulanamadı: {0}</value></data>
+  <data name="Tools.MessageError" xml:space="preserve"><value>Düzenleyici iletisi işlenemedi: {0}</value></data>
+  <data name="Tools.LoadSectionError" xml:space="preserve"><value>Bölüm düzenleyiciye yüklenemedi: {0}</value></data>
+  <data name="Tools.OpenError" xml:space="preserve"><value>EPUB açılamadı: {0}</value></data>
+  <data name="Tools.SaveError" xml:space="preserve"><value>Kitap kaydedilemedi: {0}</value></data>
+  <data name="Tools.DeleteError" xml:space="preserve"><value>Bölüm silinemedi: {0}</value></data>
+  <data name="Tools.WebViewRuntimeMissing" xml:space="preserve"><value>WebView2 Runtime bulunamadı. Düzenleyiciyi kullanmak için WebView2 Runtime kurun.</value></data>
+  <data name="Tools.WebViewStartupError" xml:space="preserve"><value>WebView2 başlatılamadı: {0}</value></data>
+  <data name="Format.Bold" xml:space="preserve"><value>Kalın</value></data>
+  <data name="Format.Italic" xml:space="preserve"><value>İtalik</value></data>
+  <data name="Format.Underline" xml:space="preserve"><value>Altı çizili</value></data>
+  <data name="Format.Heading1Tooltip" xml:space="preserve"><value>Başlık 1</value></data>
+  <data name="Format.Heading2Tooltip" xml:space="preserve"><value>Başlık 2</value></data>
+  <data name="Format.Heading3Tooltip" xml:space="preserve"><value>Başlık 3</value></data>
+  <data name="Format.BulletsTooltip" xml:space="preserve"><value>Madde işaretli liste</value></data>
+  <data name="Format.NumberingTooltip" xml:space="preserve"><value>Numaralı liste</value></data>
+  <data name="Format.AlignLeftTooltip" xml:space="preserve"><value>Sola hizala</value></data>
+  <data name="Format.AlignCenterTooltip" xml:space="preserve"><value>Ortala</value></data>
+  <data name="Format.AlignRightTooltip" xml:space="preserve"><value>Sağa hizala</value></data>
+  <data name="Format.AlignJustifyTooltip" xml:space="preserve"><value>İki yana hizala</value></data>
+  <data name="Toolbar.Previous" xml:space="preserve"><value>Önceki bölüm</value></data>
+  <data name="Toolbar.Next" xml:space="preserve"><value>Sonraki bölüm</value></data>
+  <data name="Toolbar.InsertImage" xml:space="preserve"><value>Resim ekle</value></data>
+  <data name="Toolbar.InsertLink" xml:space="preserve"><value>Bağlantı ekle</value></data>
+  <data name="Status.Total" xml:space="preserve"><value>{0} kelime toplamı</value></data>
+  <data name="Status.Current" xml:space="preserve"><value>({0} bu bölümde)</value></data>
+  <data name="Status.Ready" xml:space="preserve"><value>Bir EPUB açın veya dosyayı pencereye sürükleyin.</value></data>
+  <data name="Status.SectionsLoaded" xml:space="preserve"><value>{0} bölüm yüklendi.</value></data>
+  <data name="Status.NewBook" xml:space="preserve"><value>Yeni EPUB oluşturuldu. Kaydetmek için Ctrl+S kullanın.</value></data>
+  <data name="Status.NoBookToSave" xml:space="preserve"><value>Kaydedilecek bir EPUB açık değil.</value></data>
+  <data name="Status.Unsaved" xml:space="preserve"><value>Kaydedilmemiş değişiklikler var.</value></data>
+  <data name="Dialog.OpenEpub" xml:space="preserve"><value>EPUB kitabı aç</value></data>
+  <data name="Dialog.SaveEpub" xml:space="preserve"><value>EPUB kitabını kaydet</value></data>
+  <data name="Dialog.EpubFilter" xml:space="preserve"><value>EPUB kitapları (*.epub)|*.epub</value></data>
+  <data name="Dialog.Image" xml:space="preserve"><value>Kitaba eklenecek resmi seçin</value></data>
+  <data name="Dialog.ImagesFilter" xml:space="preserve"><value>Resimler|*.png;*.jpg;*.jpeg;*.gif;*.svg;*.webp</value></data>
+  <data name="Dialog.SectionTitle" xml:space="preserve"><value>Yeni bölüm başlığı:</value></data>
+  <data name="Dialog.RenameSection" xml:space="preserve"><value>Bölümü Yeniden Adlandır</value></data>
+  <data name="Dialog.DeleteSection" xml:space="preserve"><value>'{0}' bölümü silinsin mi?</value></data>
+  <data name="Dialog.DeleteSectionTitle" xml:space="preserve"><value>Bölümü Sil</value></data>
+  <data name="Dialog.FindText" xml:space="preserve"><value>Aranacak metin:</value></data>
+  <data name="Dialog.FindTitle" xml:space="preserve"><value>Kitapta Bul</value></data>
+  <data name="Dialog.FindReplaceText" xml:space="preserve"><value>Bulunacak metin:</value></data>
+  <data name="Dialog.ReplaceText" xml:space="preserve"><value>Yeni metin:</value></data>
+  <data name="Dialog.FindReplaceTitle" xml:space="preserve"><value>Bul ve Değiştir</value></data>
+  <data name="Tree.Cover" xml:space="preserve"><value>Cover</value></data>
+  <data name="Tree.Images" xml:space="preserve"><value>Resimler</value></data>
+  <data name="Tree.Styles" xml:space="preserve"><value>Stiller (CSS)</value></data>
+  <data name="Tree.OtherFiles" xml:space="preserve"><value>Diğer dosyalar</value></data>
+  <data name="App.Title" xml:space="preserve"><value>EPUB Atölyesi</value></data>
+  <data name="Tab.Book" xml:space="preserve"><value>Kitap</value></data>
+  <data name="Editor.CloseTab" xml:space="preserve"><value>Sekmeyi kapat</value></data>
+  <data name="Format.QuoteTooltip" xml:space="preserve"><value>Alıntı</value></data>
+  <data name="Format.StrikeTooltip" xml:space="preserve"><value>Üstü çizili</value></data>
+  <data name="Format.SuperscriptTooltip" xml:space="preserve"><value>Üst simge</value></data>
+  <data name="Format.SubscriptTooltip" xml:space="preserve"><value>Alt simge</value></data>
+  <data name="Format.IndentTooltip" xml:space="preserve"><value>Girintiyi artır</value></data>
+  <data name="Format.OutdentTooltip" xml:space="preserve"><value>Girintiyi azalt</value></data>
+  <data name="Editor.StartTyping" xml:space="preserve"><value>Yazmaya başlayın...</value></data>
+</root>

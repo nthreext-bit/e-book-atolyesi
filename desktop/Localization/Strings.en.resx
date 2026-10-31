@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Menu.File" xml:space="preserve"><value>File</value></data>
+  <data name="Menu.Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Menu.Format" xml:space="preserve"><value>Format</value></data>
+  <data name="Menu.Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="Menu.Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Menu.Document" xml:space="preserve"><value>Document</value></data>
+  <data name="Menu.Book" xml:space="preserve"><value>Book</value></data>
+  <data name="Menu.View" xml:space="preserve"><value>View</value></data>
+  <data name="Menu.Help" xml:space="preserve"><value>Help</value></data>
+  <data name="File.New" xml:space="preserve"><value>New EPUB</value></data>
+  <data name="File.Recent" xml:space="preserve"><value>Recent files</value></data>
+  <data name="File.Backup" xml:space="preserve"><value>Create backup before saving (.bak)</value></data>
+  <data name="File.Open" xml:space="preserve"><value>Open...</value></data>
+  <data name="File.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="File.SaveAs" xml:space="preserve"><value>Save As...</value></data>
+  <data name="File.Exit" xml:space="preserve"><value>Exit</value></data>
+  <data name="Action.Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="Action.Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="Action.SelectAll" xml:space="preserve"><value>Select All</value></data>
+  <data name="Panel.Organizer" xml:space="preserve"><value>ORGANIZER</value></data>
+  <data name="Panel.Control" xml:space="preserve"><value>CONTROL PANEL</value></data>
+  <data name="Panel.Palette" xml:space="preserve"><value>PALETTE</value></data>
+  <data name="Panel.Content" xml:space="preserve"><value>Content</value></data>
+  <data name="Tab.Projects" xml:space="preserve"><value>Projects</value></data>
+  <data name="Tab.Favorites" xml:space="preserve"><value>Favorites</value></data>
+  <data name="Tab.Explorer" xml:space="preserve"><value>Explorer</value></data>
+  <data name="Tab.Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Tab.Files" xml:space="preserve"><value>Files</value></data>
+  <data name="Tab.Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Tab.Styles" xml:space="preserve"><value>Styles</value></data>
+  <data name="Tab.Objects" xml:space="preserve"><value>Objects</value></data>
+  <data name="Tab.Inspector" xml:space="preserve"><value>Inspector</value></data>
+  <data name="Editor.OpenTitle" xml:space="preserve"><value>Open an EPUB book</value></data>
+  <data name="Editor.DropHint" xml:space="preserve"><value>Choose an EPUB file or drop it into this window.</value></data>
+  <data name="Toolbar.New" xml:space="preserve"><value>New</value></data>
+  <data name="Toolbar.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Toolbar.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Toolbar.Search" xml:space="preserve"><value>Search...</value></data>
+  <data name="Tools.Formatting" xml:space="preserve"><value>Formatting</value></data>
+  <data name="Tools.Alignment" xml:space="preserve"><value>Alignment</value></data>
+  <data name="Tools.Editing" xml:space="preserve"><value>Editing</value></data>
+  <data name="Tools.Font" xml:space="preserve"><value>Font</value></data>
+  <data name="View.LeftPanel" xml:space="preserve"><value>Organizer panel</value></data>
+  <data name="View.RightPanel" xml:space="preserve"><value>Palette panel</value></data>
+  <data name="View.DarkTheme" xml:space="preserve"><value>Dark theme</value></data>
+  <data name="Control.Check" xml:space="preserve"><value>Check</value></data>
+  <data name="Control.Launch" xml:space="preserve"><value>Launch</value></data>
+  <data name="Control.Save" xml:space="preserve"><value>Build / Save</value></data>
+  <data name="Format.Normal" xml:space="preserve"><value>Normal</value></data>
+  <data name="Format.Paragraph" xml:space="preserve"><value>Paragraph</value></data>
+  <data name="Format.Heading1" xml:space="preserve"><value>Heading 1</value></data>
+  <data name="Format.Heading2" xml:space="preserve"><value>Heading 2</value></data>
+  <data name="Format.Heading3" xml:space="preserve"><value>Heading 3</value></data>
+  <data name="Format.Heading4" xml:space="preserve"><value>Heading 4</value></data>
+  <data name="Format.Heading5" xml:space="preserve"><value>Heading 5</value></data>
+  <data name="Format.Heading6" xml:space="preserve"><value>Heading 6</value></data>
+  <data name="Format.Quote" xml:space="preserve"><value>Quote</value></data>
+  <data name="Format.Bullets" xml:space="preserve"><value>Bulleted list</value></data>
+  <data name="Format.Numbering" xml:space="preserve"><value>Numbered list</value></data>
+  <data name="Format.Clear" xml:space="preserve"><value>Clear formatting</value></data>
+  <data name="Format.Left" xml:space="preserve"><value>Left</value></data>
+  <data name="Format.Center" xml:space="preserve"><value>Center</value></data>
+  <data name="Format.Right" xml:space="preserve"><value>Right</value></data>
+  <data name="Format.Justify" xml:space="preserve"><value>Justify</value></data>
+  <data name="Format.Indent" xml:space="preserve"><value>Increase indent</value></data>
+  <data name="Format.Outdent" xml:space="preserve"><value>Decrease indent</value></data>
+  <data name="Format.Strike" xml:space="preserve"><value>Strikethrough</value></data>
+  <data name="Format.Superscript" xml:space="preserve"><value>Superscript</value></data>
+  <data name="Format.Subscript" xml:space="preserve"><value>Subscript</value></data>
+  <data name="Tools.Objects" xml:space="preserve"><value>Objects</value></data>
+  <data name="Tools.Colors" xml:space="preserve"><value>Colors</value></data>
+  <data name="Tools.Find" xml:space="preserve"><value>Find</value></data>
+  <data name="Tools.Replace" xml:space="preserve"><value>Replace</value></data>
+  <data name="Tools.Cut" xml:space="preserve"><value>Cut</value></data>
+  <data name="Tools.Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Tools.Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="Tools.Image" xml:space="preserve"><value>Image</value></data>
+  <data name="Tools.Link" xml:space="preserve"><value>Link</value></data>
+  <data name="Tools.HorizontalRule" xml:space="preserve"><value>Horizontal rule</value></data>
+  <data name="Tools.Table" xml:space="preserve"><value>Table</value></data>
+  <data name="Tools.FontSize" xml:space="preserve"><value>Font size</value></data>
+  <data name="Editor.WebViewTitle" xml:space="preserve"><value>WebView2 Runtime required</value></data>
+  <data name="Editor.WebViewHint" xml:space="preserve"><value>Microsoft Edge WebView2 Runtime is required for the WYSIWYG editor. Restart the app after installation.</value></data>
+  <data name="Editor.WebViewDownload" xml:space="preserve"><value>Download WebView2 Runtime</value></data>
+  <data name="Editor.InvisibleCharacters" xml:space="preserve"><value>Invisible characters</value></data>
+  <data name="Editor.Dirty" xml:space="preserve"><value>● Unsaved changes</value></data>
+  <data name="Tree.Rename" xml:space="preserve"><value>Rename section...</value></data>
+  <data name="Tree.Delete" xml:space="preserve"><value>Delete section</value></data>
+  <data name="Tree.RenamePrompt" xml:space="preserve"><value>New section title:</value></data>
+  <data name="Tree.RenameTitle" xml:space="preserve"><value>Rename Section</value></data>
+  <data name="Tree.DeletePrompt" xml:space="preserve"><value>Delete section '{0}'?</value></data>
+  <data name="Tree.DeleteTitle" xml:space="preserve"><value>Delete Section</value></data>
+  <data name="Unsaved.Prompt" xml:space="preserve"><value>There are unsaved changes. Would you like to save them?</value></data>
+  <data name="Unsaved.Title" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="Errors.AppTitle" xml:space="preserve"><value>Application error</value></data>
+  <data name="Errors.App" xml:space="preserve"><value>An unexpected error occurred. Details were written to the application log.</value></data>
+  <data name="Errors.EmptyRecent" xml:space="preserve"><value>No recent files</value></data>
+  <data name="Errors.Help" xml:space="preserve"><value>EPUB Atölyesi&#10;Edit EPUB books and chapter content.</value></data>
+  <data name="Errors.HelpTitle" xml:space="preserve"><value>Help</value></data>
+  <data name="Tools.LinkPrompt" xml:space="preserve"><value>Link address (https://, http:// or mailto:):</value></data>
+  <data name="Tools.FindPrompt" xml:space="preserve"><value>Text to find:</value></data>
+  <data name="Tools.FindTitle" xml:space="preserve"><value>Find in Book</value></data>
+  <data name="Tools.ReplaceOldPrompt" xml:space="preserve"><value>Text to find:</value></data>
+  <data name="Tools.ReplaceNewPrompt" xml:space="preserve"><value>Replacement text:</value></data>
+  <data name="Tools.ReplaceTitle" xml:space="preserve"><value>Find and Replace</value></data>
+  <data name="Tools.TextColor" xml:space="preserve"><value>Text color</value></data>
+  <data name="Tools.HighlightColor" xml:space="preserve"><value>Highlight color</value></data>
+  <data name="Tools.Black" xml:space="preserve"><value>Black</value></data>
+  <data name="Tools.Red" xml:space="preserve"><value>Red</value></data>
+  <data name="Tools.Blue" xml:space="preserve"><value>Blue</value></data>
+  <data name="Tools.Green" xml:space="preserve"><value>Green</value></data>
+  <data name="Tools.Yellow" xml:space="preserve"><value>Yellow</value></data>
+  <data name="Tools.CleanPaste" xml:space="preserve"><value>Paste as plain text</value></data>
+  <data name="Tools.ImageDialog" xml:space="preserve"><value>Select image to add to the book</value></data>
+  <data name="Tools.ImagesFilter" xml:space="preserve"><value>Images|*.png;*.jpg;*.jpeg;*.gif;*.svg;*.webp</value></data>
+  <data name="Tools.SectionRequired" xml:space="preserve"><value>Open a book and section first.</value></data>
+  <data name="Tools.ImageError" xml:space="preserve"><value>Could not add image: {0}</value></data>
+  <data name="Tools.EditorCommandError" xml:space="preserve"><value>Could not apply command: {0}</value></data>
+  <data name="Tools.MessageError" xml:space="preserve"><value>Could not process editor message: {0}</value></data>
+  <data name="Tools.LoadSectionError" xml:space="preserve"><value>Could not load section into editor: {0}</value></data>
+  <data name="Tools.OpenError" xml:space="preserve"><value>Could not open EPUB: {0}</value></data>
+  <data name="Tools.SaveError" xml:space="preserve"><value>Could not save book: {0}</value></data>
+  <data name="Tools.DeleteError" xml:space="preserve"><value>Could not delete section: {0}</value></data>
+  <data name="Tools.WebViewRuntimeMissing" xml:space="preserve"><value>WebView2 Runtime was not found. Install WebView2 Runtime to use the editor.</value></data>
+  <data name="Tools.WebViewStartupError" xml:space="preserve"><value>Could not start WebView2: {0}</value></data>
+  <data name="Format.Bold" xml:space="preserve"><value>Bold</value></data>
+  <data name="Format.Italic" xml:space="preserve"><value>Italic</value></data>
+  <data name="Format.Underline" xml:space="preserve"><value>Underline</value></data>
+  <data name="Format.Heading1Tooltip" xml:space="preserve"><value>Heading 1</value></data>
+  <data name="Format.Heading2Tooltip" xml:space="preserve"><value>Heading 2</value></data>
+  <data name="Format.Heading3Tooltip" xml:space="preserve"><value>Heading 3</value></data>
+  <data name="Format.BulletsTooltip" xml:space="preserve"><value>Bulleted list</value></data>
+  <data name="Format.NumberingTooltip" xml:space="preserve"><value>Numbered list</value></data>
+  <data name="Format.AlignLeftTooltip" xml:space="preserve"><value>Align left</value></data>
+  <data name="Format.AlignCenterTooltip" xml:space="preserve"><value>Center</value></data>
+  <data name="Format.AlignRightTooltip" xml:space="preserve"><value>Align right</value></data>
+  <data name="Format.AlignJustifyTooltip" xml:space="preserve"><value>Justify</value></data>
+  <data name="Toolbar.Previous" xml:space="preserve"><value>Previous section</value></data>
+  <data name="Toolbar.Next" xml:space="preserve"><value>Next section</value></data>
+  <data name="Toolbar.InsertImage" xml:space="preserve"><value>Insert image</value></data>
+  <data name="Toolbar.InsertLink" xml:space="preserve"><value>Insert link</value></data>
+  <data name="Status.Total" xml:space="preserve"><value>{0} total words</value></data>
+  <data name="Status.Current" xml:space="preserve"><value>({0} in this section)</value></data>
+  <data name="Status.Ready" xml:space="preserve"><value>Open an EPUB or drop a file into this window.</value></data>
+  <data name="Status.SectionsLoaded" xml:space="preserve"><value>{0} sections loaded.</value></data>
+  <data name="Status.NewBook" xml:space="preserve"><value>New EPUB created. Press Ctrl+S to save.</value></data>
+  <data name="Status.NoBookToSave" xml:space="preserve"><value>No EPUB is open to save.</value></data>
+  <data name="Status.Unsaved" xml:space="preserve"><value>There are unsaved changes.</value></data>
+  <data name="Dialog.OpenEpub" xml:space="preserve"><value>Open EPUB book</value></data>
+  <data name="Dialog.SaveEpub" xml:space="preserve"><value>Save EPUB book</value></data>
+  <data name="Dialog.EpubFilter" xml:space="preserve"><value>EPUB books (*.epub)|*.epub</value></data>
+  <data name="Dialog.Image" xml:space="preserve"><value>Select image to add to the book</value></data>
+  <data name="Dialog.ImagesFilter" xml:space="preserve"><value>Images|*.png;*.jpg;*.jpeg;*.gif;*.svg;*.webp</value></data>
+  <data name="Dialog.SectionTitle" xml:space="preserve"><value>New section title:</value></data>
+  <data name="Dialog.RenameSection" xml:space="preserve"><value>Rename Section</value></data>
+  <data name="Dialog.DeleteSection" xml:space="preserve"><value>Delete section '{0}'?</value></data>
+  <data name="Dialog.DeleteSectionTitle" xml:space="preserve"><value>Delete Section</value></data>
+  <data name="Dialog.FindText" xml:space="preserve"><value>Text to find:</value></data>
+  <data name="Dialog.FindTitle" xml:space="preserve"><value>Find in Book</value></data>
+  <data name="Dialog.FindReplaceText" xml:space="preserve"><value>Text to find:</value></data>
+  <data name="Dialog.ReplaceText" xml:space="preserve"><value>Replacement text:</value></data>
+  <data name="Dialog.FindReplaceTitle" xml:space="preserve"><value>Find and Replace</value></data>
+  <data name="Tree.Cover" xml:space="preserve"><value>Cover</value></data>
+  <data name="Tree.Images" xml:space="preserve"><value>Images</value></data>
+  <data name="Tree.Styles" xml:space="preserve"><value>Styles (CSS)</value></data>
+  <data name="Tree.OtherFiles" xml:space="preserve"><value>Other files</value></data>
+  <data name="App.Title" xml:space="preserve"><value>EPUB Atölyesi</value></data>
+  <data name="Tab.Book" xml:space="preserve"><value>Book</value></data>
+  <data name="Editor.CloseTab" xml:space="preserve"><value>Close tab</value></data>
+  <data name="Format.QuoteTooltip" xml:space="preserve"><value>Quote</value></data>
+  <data name="Format.StrikeTooltip" xml:space="preserve"><value>Strikethrough</value></data>
+  <data name="Format.SuperscriptTooltip" xml:space="preserve"><value>Superscript</value></data>
+  <data name="Format.SubscriptTooltip" xml:space="preserve"><value>Subscript</value></data>
+  <data name="Format.IndentTooltip" xml:space="preserve"><value>Increase indent</value></data>
+  <data name="Format.OutdentTooltip" xml:space="preserve"><value>Decrease indent</value></data>
+  <data name="Editor.StartTyping" xml:space="preserve"><value>Start typing...</value></data>
+</root>

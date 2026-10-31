@@ -1,4 +1,4 @@
-// E-Kitap Düzenleyici - C# WPF Project Source Code Files
+// EPUB Atölyesi - C# WPF Project Source Code Files
 export interface CodeFile {
   name: string;
   path: string;
@@ -8,8 +8,8 @@ export interface CodeFile {
 
 export const csharpProjectFiles: CodeFile[] = [
   {
-    name: "EkitapDuzenleyici.csproj",
-    path: "EkitapDuzenleyici.csproj",
+    name: "EpubAtolyesi.csproj",
+    path: "EpubAtolyesi.csproj",
     language: "xml",
     content: `<Project Sdk="Microsoft.NET.Sdk">
 
@@ -19,8 +19,8 @@ export const csharpProjectFiles: CodeFile[] = [
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationTitle>E-Kitap Düzenleyici</ApplicationTitle>
-    <AssemblyTitle>E-Kitap Düzenleyici</AssemblyTitle>
+    <ApplicationTitle>EPUB Atölyesi</ApplicationTitle>
+    <AssemblyTitle>EPUB Atölyesi</AssemblyTitle>
     
     <!-- Publish Single File Settings for standalone EXE -->
     <PublishSingleFile>true</PublishSingleFile>
@@ -1039,7 +1039,7 @@ namespace EkitapDuzenleyici.ViewModels
         {
             try
             {
-                string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EkitapDuzenleyici");
+                string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EpubAtolyesi");
                 string settingsFile = Path.Combine(appData, "settings.json");
                 if (File.Exists(settingsFile))
                 {
@@ -1061,7 +1061,7 @@ namespace EkitapDuzenleyici.ViewModels
         {
             try
             {
-                string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EkitapDuzenleyici");
+                string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EpubAtolyesi");
                 if (!Directory.Exists(appData)) Directory.CreateDirectory(appData);
 
                 string settingsFile = Path.Combine(appData, "settings.json");
@@ -1089,7 +1089,7 @@ namespace EkitapDuzenleyici.ViewModels
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:EkitapDuzenleyici.ViewModels"
         xmlns:helpers="clr-namespace:EkitapDuzenleyici.Helpers"
-        Title="E-Kitap Düzenleyici &amp; Düzenleyici - .NET 8 MVVM" 
+        Title="EPUB Atölyesi - .NET 8 MVVM"
         Height="720" Width="1200"
         Style="{StaticResource DarkWindowStyle}"
         WindowStartupLocation="CenterScreen">
@@ -1124,7 +1124,7 @@ namespace EkitapDuzenleyici.ViewModels
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="📚" FontSize="26" Margin="0,0,10,0"/>
                     <StackPanel>
-                        <TextBlock Text="E-KİTAP DÜZENLEYİCİ" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="EPUB ATÖLYESİ" FontSize="16" FontWeight="Bold" Foreground="White"/>
                         <TextBlock Text="C# .NET 8 WPF MVVM Kitap Arşivleyici ve İsimlendirici" FontSize="11" Foreground="{StaticResource MutedTextBrush}"/>
                     </StackPanel>
                 </StackPanel>

@@ -1,6 +1,6 @@
 {
-  "name": "E-Kitap Düzenleyici",
-  "description": "EPUB, PDF, MOBI ve AZW3 formatındaki e-kitapları tarayan, metadata bilgilerine göre yazar ve kategori bazlı klasörleyen ve dosya adlarını standartlaştıran C# WPF (.NET 8) tabanlı masaüstü uygulaması ve interaktif simülatörü.",
+  "name": "EPUB Atölyesi",
+  "description": "EPUB 2 ve EPUB 3 kitaplarını açıp XHTML bölüm içeriklerini WebView2 tabanlı WYSIWYG düzenleyicide düzenlemek için geliştirilen C#/.NET 8 WPF uygulaması ve etkileşimli prototip.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

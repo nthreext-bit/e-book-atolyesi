@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">EPUB Atölyesi masaüstü düzenleyici görünümü</title>
+  <desc id="desc">Bölüm ağacı, sayfa görünümünde metin düzenleyici ve biçim paleti içeren üç panelli editör taslağı.</desc>
+  <rect width="1200" height="560" fill="#e9eef0"/>
+  <rect width="1200" height="58" fill="#1d292d"/>
+  <rect x="22" y="14" width="30" height="30" rx="6" fill="#236b5c"/>
+  <path d="M29 20h7c4 0 7 2 7 5v13c-2-2-4-3-7-3h-7z" fill="none" stroke="#f4fbf8" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M29 20v15c3-1 6 0 8 2V25c-1-3-4-5-8-5z" fill="none" stroke="#f4fbf8" stroke-width="1.7" stroke-linejoin="round"/>
+  <text x="64" y="36" fill="#f2f6f5" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">EPUB ATÖLYESİ</text>
+  <text x="300" y="35" fill="#b5c4c1" font-family="Segoe UI, sans-serif" font-size="12">Dosya</text>
+  <text x="350" y="35" fill="#b5c4c1" font-family="Segoe UI, sans-serif" font-size="12">Düzen</text>
+  <text x="410" y="35" fill="#b5c4c1" font-family="Segoe UI, sans-serif" font-size="12">Biçim</text>
+  <text x="466" y="35" fill="#b5c4c1" font-family="Segoe UI, sans-serif" font-size="12">Ekle</text>
+  <rect x="1005" y="13" width="172" height="32" rx="5" fill="#2a383b" stroke="#425256"/>
+  <circle cx="1022" cy="29" r="5" fill="none" stroke="#9caeaa" stroke-width="1.5"/>
+  <path d="m1026 33 4 4" stroke="#9caeaa" stroke-width="1.5"/>
+  <text x="1040" y="33" fill="#aebbb8" font-family="Segoe UI, sans-serif" font-size="12">Kitapta ara</text>
+
+  <rect x="0" y="58" width="238" height="466" fill="#f9fbfb"/>
+  <line x1="238" y1="58" x2="238" y2="524" stroke="#d5dfe0"/>
+  <text x="22" y="88" fill="#5b6d70" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" letter-spacing="1">DÜZENLEYİCİ</text>
+  <text x="22" y="122" fill="#253438" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700">Projeler</text>
+  <text x="95" y="122" fill="#899799" font-family="Segoe UI, sans-serif" font-size="12">Sık Kullanılanlar</text>
+  <rect x="14" y="142" width="210" height="34" rx="4" fill="#e9f2ef"/>
+  <path d="m28 153 5 5 5-5" fill="none" stroke="#287361" stroke-width="1.5"/>
+  <text x="46" y="164" fill="#236b5c" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700">Content</text>
+  <g font-family="Segoe UI, sans-serif" font-size="12">
+    <rect x="40" y="184" width="8" height="10" rx="1" fill="#95aaa6"/><text x="58" y="193" fill="#526367">Cover</text>
+    <rect x="40" y="214" width="8" height="10" rx="1" fill="#287361"/><text x="58" y="223" fill="#236b5c" font-weight="700">Section0001</text>
+    <rect x="40" y="244" width="8" height="10" rx="1" fill="#95aaa6"/><text x="58" y="253" fill="#526367">Section0002</text>
+    <rect x="40" y="274" width="8" height="10" rx="1" fill="#95aaa6"/><text x="58" y="283" fill="#526367">Section0003</text>
+    <path d="m27 305 5 5 5-5" fill="none" stroke="#879797" stroke-width="1.5"/><text x="46" y="315" fill="#526367">Resimler</text>
+    <path d="m27 335 5 5 5-5" fill="none" stroke="#879797" stroke-width="1.5"/><text x="46" y="345" fill="#526367">Stiller (CSS)</text>
+    <text x="46" y="375" fill="#526367">Diğer dosyalar</text>
+  </g>
+  <line x1="0" y1="408" x2="238" y2="408" stroke="#d5dfe0"/>
+  <text x="22" y="435" fill="#5b6d70" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" letter-spacing="1">KONTROL PANELİ</text>
+  <rect x="18" y="450" width="92" height="30" rx="4" fill="#236b5c"/>
+  <text x="42" y="469" fill="#fff" font-family="Segoe UI, sans-serif" font-size="11" font-weight="600">EPUB</text>
+  <text x="126" y="469" fill="#526367" font-family="Segoe UI, sans-serif" font-size="11">Dosyalar</text>
+
+  <rect x="252" y="70" width="710" height="42" rx="5" fill="#fff" stroke="#d5dfe0"/>
+  <g font-family="Segoe UI, sans-serif" font-size="12" fill="#344649" text-anchor="middle">
+    <text x="282" y="96">＋ Yeni</text><text x="350" y="96">Aç</text><text x="410" y="96">Kaydet</text>
+    <line x1="447" y1="80" x2="447" y2="102" stroke="#d5dfe0"/>
+    <text x="478" y="96" font-weight="700">K</text><text x="516" y="96" font-style="italic">İ</text><text x="554" y="96" text-decoration="underline">A</text>
+    <text x="604" y="96">H1</text><text x="649" y="96">• Liste</text><text x="713" y="96">Bağlantı</text><text x="781" y="96">Resim</text>
+  </g>
+  <rect x="272" y="128" width="670" height="370" rx="5" fill="#fff" stroke="#d5dfe0"/>
+  <rect x="420" y="145" width="375" height="340" fill="#fff"/>
+  <text x="458" y="190" fill="#263638" font-family="Georgia, serif" font-size="25" font-weight="700">Bölüm başlığı</text>
+  <line x1="458" y1="208" x2="750" y2="208" stroke="#e8edeb"/>
+  <g fill="#526166" font-family="Georgia, serif" font-size="14">
+    <text x="458" y="245">Metninizi doğrudan bu sayfada düzenleyin.</text>
+    <text x="458" y="270">Başlıklar, bağlantılar ve görseller EPUB</text>
+    <text x="458" y="295">içeriğine uygun XHTML olarak saklanır.</text>
+    <text x="458" y="340">Bölüm değiştirirken düzenlemeler korunur.</text>
+  </g>
+  <text x="458" y="390" fill="#176b9b" font-family="Georgia, serif" font-size="14" text-decoration="underline">Bir bölüm içi bağlantı</text>
+  <rect x="458" y="420" width="170" height="30" rx="3" fill="#f1f6f4"/>
+  <text x="472" y="440" fill="#54716a" font-family="Segoe UI, sans-serif" font-size="11">129.572 kelime toplamı</text>
+
+  <rect x="976" y="70" width="224" height="428" rx="5" fill="#fff" stroke="#d5dfe0"/>
+  <text x="997" y="98" fill="#5b6d70" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" letter-spacing="1">PALET</text>
+  <text x="997" y="131" fill="#253438" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700">Biçimlendirme</text>
+  <g font-family="Segoe UI, sans-serif" font-size="11" fill="#344649">
+    <rect x="994" y="145" width="54" height="34" rx="4" fill="#f1f4f3" stroke="#d5dfe0"/><text x="1017" y="167" text-anchor="middle" font-weight="700">Kalın</text>
+    <rect x="1058" y="145" width="54" height="34" rx="4" fill="#f1f4f3" stroke="#d5dfe0"/><text x="1085" y="167" text-anchor="middle" font-style="italic">İtalik</text>
+    <rect x="1122" y="145" width="58" height="34" rx="4" fill="#f1f4f3" stroke="#d5dfe0"/><text x="1151" y="167" text-anchor="middle" text-decoration="underline">Altı çizili</text>
+  </g>
+  <text x="997" y="213" fill="#253438" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700">Yazı tipi</text>
+  <rect x="994" y="226" width="186" height="32" rx="4" fill="#fff" stroke="#d5dfe0"/>
+  <text x="1006" y="247" fill="#526367" font-family="Segoe UI, sans-serif" font-size="11">Georgia</text>
+  <text x="997" y="290" fill="#253438" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700">Stil</text>
+  <rect x="994" y="303" width="186" height="32" rx="4" fill="#fff" stroke="#d5dfe0"/>
+  <text x="1006" y="324" fill="#526367" font-family="Segoe UI, sans-serif" font-size="11">Paragraf</text>
+  <line x1="994" y1="356" x2="1180" y2="356" stroke="#e2e8e7"/>
+  <circle cx="1003" cy="383" r="4" fill="#d68a2f"/>
+  <text x="1017" y="387" fill="#6b7778" font-family="Segoe UI, sans-serif" font-size="11">Değişiklik kaydedilmedi</text>
+  <rect x="0" y="524" width="1200" height="36" fill="#f8faf9"/>
+  <line x1="0" y1="524" x2="1200" y2="524" stroke="#d5dfe0"/>
+  <text x="22" y="547" fill="#687779" font-family="Segoe UI, sans-serif" font-size="11">129.572 kelime · 248 bu bölümde</text>
+  <text x="1178" y="547" fill="#687779" font-family="Segoe UI, sans-serif" font-size="11" text-anchor="end">EPUB 3 · Section0001.xhtml</text>
+</svg>

@@ -1,0 +1,244 @@
+<Window x:Class="KitaplikEditoru.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="{DynamicResource App.Title}" Width="1440" Height="920" MinWidth="1024" MinHeight="680"
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource TextPrimary}"
+        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver" PreviewKeyDown="Window_PreviewKeyDown">
+  <DockPanel>
+    <Menu DockPanel.Dock="Top" Background="{StaticResource PanelBackground}">
+      <MenuItem Header="{DynamicResource Menu.File}">
+        <MenuItem Header="{DynamicResource File.New}" Command="{Binding CreateNewCommand}" InputGestureText="Ctrl+N" />
+        <Separator />
+        <MenuItem x:Name="RecentFilesMenu" Header="{DynamicResource File.Recent}" SubmenuOpened="RecentFilesMenu_SubmenuOpened" />
+        <Separator />
+        <MenuItem Header="{DynamicResource File.Open}" Command="{Binding OpenEpubCommand}" InputGestureText="Ctrl+O" />
+        <MenuItem Header="{DynamicResource File.Save}" Click="Save_Click" InputGestureText="Ctrl+S" />
+        <MenuItem Header="{DynamicResource File.SaveAs}" Click="SaveAs_Click" />
+        <MenuItem Header="{DynamicResource File.Backup}" IsCheckable="True" IsChecked="{Binding BackupEnabled, Mode=TwoWay}" />
+        <Separator />
+        <MenuItem Header="{DynamicResource File.Exit}" Click="Exit_Click" />
+      </MenuItem>
+      <MenuItem Header="{DynamicResource Menu.Edit}">
+        <MenuItem Header="{DynamicResource Action.Undo}" Click="Undo_Click" InputGestureText="Ctrl+Z" />
+        <MenuItem Header="{DynamicResource Action.Redo}" Click="Redo_Click" InputGestureText="Ctrl+Y" />
+        <Separator />
+        <MenuItem Header="{DynamicResource Action.SelectAll}" Click="SelectAll_Click" InputGestureText="Ctrl+A" />
+      </MenuItem>
+      <MenuItem Header="{DynamicResource Menu.Format}" IsEnabled="False" />
+      <MenuItem Header="{DynamicResource Menu.Insert}" IsEnabled="False" />
+      <MenuItem Header="{DynamicResource Menu.Tools}" IsEnabled="False" />
+      <MenuItem Header="{DynamicResource Menu.Document}" IsEnabled="False" />
+      <MenuItem Header="{DynamicResource Menu.Book}" IsEnabled="False" />
+      <MenuItem Header="{DynamicResource Menu.View}">
+        <MenuItem x:Name="LeftPanelToggle" Header="{DynamicResource View.LeftPanel}" IsCheckable="True" IsChecked="True" />
+        <MenuItem x:Name="PalettePanelToggle" Header="{DynamicResource View.RightPanel}" IsCheckable="True" IsChecked="True" />
+        <Separator />
+        <MenuItem Header="{DynamicResource View.DarkTheme}" IsCheckable="True" IsChecked="{Binding DarkTheme, Mode=TwoWay}" />
+      </MenuItem>
+      <MenuItem Header="{DynamicResource Menu.Help}" Click="Help_Click" />
+    </Menu>
+
+    <Border DockPanel.Dock="Top" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="0,0,0,1" Padding="8,6">
+      <DockPanel LastChildFill="False">
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+          <Button Command="{Binding CreateNewCommand}" ToolTip="{DynamicResource File.New}" FontSize="14"><StackPanel><TextBlock Text="＋" HorizontalAlignment="Center" FontSize="18"/><TextBlock Text="{DynamicResource Toolbar.New}" FontSize="11"/></StackPanel></Button>
+          <Button Command="{Binding OpenEpubCommand}" ToolTip="{DynamicResource File.Open}" FontSize="14"><StackPanel><TextBlock Text="▣" HorizontalAlignment="Center" FontSize="18"/><TextBlock Text="{DynamicResource Toolbar.Open}" FontSize="11"/></StackPanel></Button>
+          <Button Click="Save_Click" ToolTip="{DynamicResource File.Save}" FontSize="14"><StackPanel><TextBlock Text="▤" HorizontalAlignment="Center" FontSize="18"/><TextBlock Text="{DynamicResource Toolbar.Save}" FontSize="11"/></StackPanel></Button>
+          <Separator Margin="6,3" />
+          <Button Click="PreviousSection_Click" ToolTip="{DynamicResource Toolbar.Previous}">◀</Button>
+          <Button Click="NextSection_Click" ToolTip="{DynamicResource Toolbar.Next}">▶</Button>
+          <Separator Margin="6,3" />
+          <Button Click="Format_Click" Tag="bold" ToolTip="{DynamicResource Format.Bold}"><TextBlock FontWeight="Bold" Text="K" FontSize="16"/></Button>
+          <Button Click="Format_Click" Tag="italic" ToolTip="{DynamicResource Format.Italic}"><TextBlock FontStyle="Italic" Text="İ" FontSize="16"/></Button>
+          <Button Click="Format_Click" Tag="underline" ToolTip="{DynamicResource Format.Underline}"><TextBlock Text="A̲" FontSize="16"/></Button>
+          <Button Click="Block_Click" Tag="h1" ToolTip="{DynamicResource Format.Heading1Tooltip}">H1</Button>
+          <Button Click="Block_Click" Tag="h2" ToolTip="{DynamicResource Format.Heading2Tooltip}">H2</Button>
+          <Button Click="Block_Click" Tag="h3" ToolTip="{DynamicResource Format.Heading3Tooltip}">H3</Button>
+          <Button Click="Block_Click" Tag="blockquote" ToolTip="{DynamicResource Format.QuoteTooltip}">❞</Button>
+          <Button Click="Format_Click" Tag="insertUnorderedList" ToolTip="{DynamicResource Format.BulletsTooltip}" Content="{DynamicResource Format.Bullets}" />
+          <Button Click="Format_Click" Tag="insertOrderedList" ToolTip="{DynamicResource Format.NumberingTooltip}" Content="{DynamicResource Format.Numbering}" />
+          <Button Click="Format_Click" Tag="justifyLeft" ToolTip="{DynamicResource Format.AlignLeftTooltip}">←</Button>
+          <Button Click="Format_Click" Tag="justifyCenter" ToolTip="{DynamicResource Format.AlignCenterTooltip}">↔</Button>
+          <Button Click="Format_Click" Tag="justifyRight" ToolTip="{DynamicResource Format.AlignRightTooltip}">→</Button>
+          <Button Click="Format_Click" Tag="justifyFull" ToolTip="{DynamicResource Format.AlignJustifyTooltip}">☰</Button>
+          <Button Click="Format_Click" Tag="strikeThrough" ToolTip="{DynamicResource Format.StrikeTooltip}">S̶</Button>
+          <Button Click="Format_Click" Tag="superscript" ToolTip="{DynamicResource Format.SuperscriptTooltip}">x²</Button>
+          <Button Click="Format_Click" Tag="subscript" ToolTip="{DynamicResource Format.SubscriptTooltip}">x₂</Button>
+          <Separator Margin="6,3" />
+          <Button Click="Format_Click" Tag="indent" ToolTip="{DynamicResource Format.IndentTooltip}">⇥</Button>
+          <Button Click="Format_Click" Tag="outdent" ToolTip="{DynamicResource Format.OutdentTooltip}">⇤</Button>
+          <Button Click="Format_Click" Tag="cut" ToolTip="Kes">Kes</Button>
+          <Button Click="Format_Click" Tag="copy" ToolTip="Kopyala">Kopyala</Button>
+          <Button Click="Paste_Click" ToolTip="{DynamicResource Tools.CleanPaste}" Content="{DynamicResource Tools.Paste}" />
+          <Button Click="Image_Click" ToolTip="{DynamicResource Toolbar.InsertImage}" Content="{DynamicResource Tools.Image}" />
+          <Button Click="Link_Click" ToolTip="{DynamicResource Toolbar.InsertLink}" Content="{DynamicResource Tools.Link}" />
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <TextBox x:Name="SearchTextBox" Width="185" Margin="12,4,4,4" VerticalContentAlignment="Center" ToolTip="{DynamicResource Toolbar.Search}" KeyDown="SearchTextBox_KeyDown" />
+          <Button Click="Search_Click" Content="{DynamicResource Tools.Find}" Margin="2,4,4,4" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="0,1,0,0" Padding="10,6">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" />
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <TextBlock Text="{Binding TotalWordCountText}" Margin="0,0,10,0" />
+            <TextBlock Text="{Binding CurrentWordCountText}" />
+          </StackPanel>
+          <TextBlock Text="{Binding CurrentFilePath}" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
+      </DockPanel>
+    </Border>
+
+    <Grid Margin="8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition x:Name="LeftPanelColumn" Width="250" MinWidth="190" />
+        <ColumnDefinition Width="5" />
+        <ColumnDefinition Width="*" MinWidth="400" />
+        <ColumnDefinition Width="5" />
+        <ColumnDefinition x:Name="RightPanelColumn" Width="280" MinWidth="220" />
+      </Grid.ColumnDefinitions>
+      <GridSplitter x:Name="LeftPanelSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource PanelBorder}" />
+      <GridSplitter x:Name="RightPanelSplitter" Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource PanelBorder}" />
+
+      <Grid x:Name="LeftPanel" Grid.Column="0" Margin="0,0,5,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="3*" MinHeight="230" />
+          <RowDefinition Height="5" />
+          <RowDefinition Height="2*" MinHeight="160" />
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="4">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{DynamicResource Panel.Organizer}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="12,10" />
+            <TabControl>
+              <TabItem Header="{DynamicResource Tab.Projects}">
+                <DockPanel Margin="8">
+                  <TextBlock DockPanel.Dock="Top" Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="3,4,3,8" />
+                  <TreeView SelectedItemChanged="Section_TreeSelectionChanged" PreviewMouseLeftButtonDown="SectionsTree_MouseDown" PreviewMouseMove="SectionsTree_PreviewMouseMove" DragOver="SectionsTree_DragOver" Drop="SectionsTree_Drop" AllowDrop="True" BorderThickness="0">
+                    <TreeView.Resources>
+                      <Style TargetType="TreeViewItem">
+                        <Setter Property="ContextMenu">
+                          <Setter.Value>
+                            <ContextMenu>
+                              <MenuItem Header="{DynamicResource Tree.Rename}" Click="RenameSection_Click" Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                              <MenuItem Header="{DynamicResource Tree.Delete}" Click="DeleteSection_Click" Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                            </ContextMenu>
+                          </Setter.Value>
+                        </Setter>
+                      </Style>
+                    </TreeView.Resources>
+                    <TreeViewItem Header="{DynamicResource Panel.Content}" IsExpanded="True" ItemsSource="{Binding Sections}">
+                      <TreeViewItem.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Margin="3,4"><TextBlock Text="▤" Foreground="{StaticResource AccentBrush}" Margin="0,0,8,0"/><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" /></StackPanel></DataTemplate></TreeViewItem.ItemTemplate>
+                    </TreeViewItem>
+                    <TreeViewItem Header="{DynamicResource Tree.Cover}" ItemsSource="{Binding CoverResources}"><TreeViewItem.ItemTemplate><DataTemplate><TextBlock Text="{Binding Href}" Margin="3,4" /></DataTemplate></TreeViewItem.ItemTemplate></TreeViewItem>
+                    <TreeViewItem Header="{DynamicResource Tree.Images}" ItemsSource="{Binding ImageResources}"><TreeViewItem.ItemTemplate><DataTemplate><TextBlock Text="{Binding Href}" Margin="3,4" /></DataTemplate></TreeViewItem.ItemTemplate></TreeViewItem>
+                    <TreeViewItem Header="{DynamicResource Tree.Styles}" ItemsSource="{Binding StyleResources}"><TreeViewItem.ItemTemplate><DataTemplate><TextBlock Text="{Binding Href}" Margin="3,4" /></DataTemplate></TreeViewItem.ItemTemplate></TreeViewItem>
+                    <TreeViewItem Header="{DynamicResource Tree.OtherFiles}" ItemsSource="{Binding OtherResources}"><TreeViewItem.ItemTemplate><DataTemplate><TextBlock Text="{Binding Href}" Margin="3,4" /></DataTemplate></TreeViewItem.ItemTemplate></TreeViewItem>
+                  </TreeView>
+                </DockPanel>
+              </TabItem>
+              <TabItem Header="{DynamicResource Tab.Favorites}"><TextBlock Text="{DynamicResource Tab.Favorites}" Margin="12" Foreground="{StaticResource TextSecondary}" /></TabItem>
+              <TabItem Header="{DynamicResource Tab.Explorer}"><ListBox ItemsSource="{Binding Resources}" DisplayMemberPath="Href" BorderThickness="0" /></TabItem>
+            </TabControl>
+          </DockPanel>
+        </Border>
+        <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="{StaticResource PanelBorder}" />
+        <Border Grid.Row="2" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="4">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{DynamicResource Panel.Control}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="12,10" />
+            <TabControl>
+              <TabItem Header="{DynamicResource Tab.Build}"><StackPanel Margin="10"><TextBlock Text="EPUB" FontWeight="SemiBold" Margin="3"/><Button Content="{DynamicResource Control.Save}" Click="Save_Click"/><Button Content="{DynamicResource Control.Check}" IsEnabled="False"/><Button Content="{DynamicResource Control.Launch}" IsEnabled="False"/></StackPanel></TabItem>
+              <TabItem Header="{DynamicResource Tab.Files}"><ListBox ItemsSource="{Binding Resources}" DisplayMemberPath="Href" BorderThickness="0" /></TabItem>
+            </TabControl>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <Grid Grid.Column="2" Margin="5,0">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <TabControl Grid.Row="0" Height="34" ItemsSource="{Binding OpenSections}" SelectedItem="{Binding CurrentSection, Mode=TwoWay}">
+          <TabControl.ItemTemplate>
+            <DataTemplate>
+              <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Content="×" Padding="4,0" Margin="4,0,0,0" Tag="{Binding}" Click="CloseSectionTab_Click" ToolTip="{DynamicResource Editor.CloseTab}" />
+                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" MaxWidth="180" TextTrimming="CharacterEllipsis" />
+              </DockPanel>
+            </DataTemplate>
+          </TabControl.ItemTemplate>
+          <TabControl.ContentTemplate><DataTemplate><Grid /></DataTemplate></TabControl.ContentTemplate>
+        </TabControl>
+        <Border Grid.Row="1" Background="#E8EBEF" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1">
+          <Grid>
+            <wv2:WebView2 x:Name="EditorWebView" Visibility="Collapsed" />
+            <StackPanel x:Name="NoBookPanel" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420" Visibility="Visible">
+              <TextBlock Text="{DynamicResource Editor.OpenTitle}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="12" />
+              <TextBlock Text="{DynamicResource Editor.DropHint}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="12" />
+              <Button Content="{DynamicResource File.Open}" Command="{Binding OpenEpubCommand}" HorizontalAlignment="Center" Padding="22,10" />
+            </StackPanel>
+            <StackPanel x:Name="WebViewWarning" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="520" Visibility="Collapsed" Margin="24">
+              <TextBlock Text="{DynamicResource Editor.WebViewTitle}" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="8" />
+              <TextBlock Text="{DynamicResource Editor.WebViewHint}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="8" />
+              <TextBlock HorizontalAlignment="Center" Margin="8"><Hyperlink NavigateUri="https://developer.microsoft.com/microsoft-edge/webview2/" RequestNavigate="WebViewLink_RequestNavigate"><Run Text="{DynamicResource Editor.WebViewDownload}" /></Hyperlink></TextBlock>
+            </StackPanel>
+          </Grid>
+        </Border>
+        <DockPanel Grid.Row="2" Margin="2,7">
+          <TextBlock DockPanel.Dock="Left" Text="{Binding CurrentWordCountText}" Foreground="{StaticResource TextSecondary}" />
+          <TextBlock DockPanel.Dock="Right" Text="{DynamicResource Editor.Dirty}" Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibilityConverter}}" Foreground="{StaticResource AccentBrush}" />
+          <CheckBox Content="{DynamicResource Editor.InvisibleCharacters}" IsEnabled="False" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+        </DockPanel>
+      </Grid>
+
+      <Border x:Name="PalettePanel" Grid.Column="4" Margin="5,0,0,0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="4">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{DynamicResource Panel.Palette}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="12,10" />
+          <TabControl>
+            <TabItem Header="{DynamicResource Tab.Tools}">
+              <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8">
+                <TextBlock Text="{DynamicResource Tools.Formatting}" FontWeight="SemiBold" Margin="4,8" />
+                <UniformGrid Columns="3">
+                  <Button Click="Format_Click" Tag="bold" ToolTip="{DynamicResource Format.Bold}"><TextBlock Text="K" FontWeight="Bold"/></Button>
+                  <Button Click="Format_Click" Tag="italic" ToolTip="{DynamicResource Format.Italic}"><TextBlock Text="İ" FontStyle="Italic"/></Button>
+                  <Button Click="Format_Click" Tag="underline" ToolTip="{DynamicResource Format.Underline}"><TextBlock Text="A̲"/></Button>
+                  <Button Click="Block_Click" Tag="p" Content="{DynamicResource Format.Paragraph}" />
+                  <Button Click="Block_Click" Tag="h1" Content="{DynamicResource Format.Heading1}" />
+                  <Button Click="Block_Click" Tag="h2" Content="{DynamicResource Format.Heading2}" />
+                  <Button Click="Block_Click" Tag="h3" Content="{DynamicResource Format.Heading3}" />
+                  <Button Click="Block_Click" Tag="h4" Content="{DynamicResource Format.Heading4}" />
+                  <Button Click="Block_Click" Tag="h5" Content="{DynamicResource Format.Heading5}" />
+                  <Button Click="Block_Click" Tag="h6" Content="{DynamicResource Format.Heading6}" />
+                  <Button Click="Block_Click" Tag="blockquote" Content="{DynamicResource Format.Quote}" />
+                  <Button Click="Format_Click" Tag="insertUnorderedList" Content="{DynamicResource Format.Bullets}" />
+                  <Button Click="Format_Click" Tag="insertOrderedList" Content="{DynamicResource Format.Numbering}" />
+                  <Button Click="Format_Click" Tag="removeFormat" Content="{DynamicResource Format.Clear}" />
+                  <Button Click="Format_Click" Tag="strikeThrough" Content="{DynamicResource Format.Strike}" />
+                  <Button Click="Format_Click" Tag="superscript" Content="{DynamicResource Format.Superscript}" />
+                  <Button Click="Format_Click" Tag="subscript" Content="{DynamicResource Format.Subscript}" />
+                </UniformGrid>
+                <TextBlock Text="{DynamicResource Tools.Alignment}" FontWeight="SemiBold" Margin="4,12,4,5" />
+                <UniformGrid Columns="4"><Button Click="Format_Click" Tag="justifyLeft" Content="{DynamicResource Format.Left}"/><Button Click="Format_Click" Tag="justifyCenter" Content="{DynamicResource Format.Center}"/><Button Click="Format_Click" Tag="justifyRight" Content="{DynamicResource Format.Right}"/><Button Click="Format_Click" Tag="justifyFull" Content="{DynamicResource Format.Justify}"/></UniformGrid>
+                <UniformGrid Columns="2"><Button Click="Format_Click" Tag="indent" Content="{DynamicResource Format.Indent}"/><Button Click="Format_Click" Tag="outdent" Content="{DynamicResource Format.Outdent}"/></UniformGrid>
+                <TextBlock Text="{DynamicResource Tools.Editing}" FontWeight="SemiBold" Margin="4,12,4,5" />
+                <UniformGrid Columns="2"><Button Click="Undo_Click" Content="{DynamicResource Action.Undo}"/><Button Click="Redo_Click" Content="{DynamicResource Action.Redo}"/><Button Click="Format_Click" Tag="cut" Content="{DynamicResource Tools.Cut}"/><Button Click="Format_Click" Tag="copy" Content="{DynamicResource Tools.Copy}"/><Button Click="Paste_Click" Content="{DynamicResource Tools.Paste}"/><Button Click="Find_Click" Content="{DynamicResource Tools.Find}"/><Button Click="Replace_Click" Content="{DynamicResource Tools.Replace}"/></UniformGrid>
+                <TextBlock Text="{DynamicResource Tools.Objects}" FontWeight="SemiBold" Margin="4,12,4,5" />
+                <UniformGrid Columns="2"><Button Click="Image_Click" Content="{DynamicResource Tools.Image}"/><Button Click="Link_Click" Content="{DynamicResource Tools.Link}"/><Button Click="Format_Click" Tag="insertHorizontalRule" Content="{DynamicResource Tools.HorizontalRule}"/><Button Click="Table_Click" Content="{DynamicResource Tools.Table}"/></UniformGrid>
+                <TextBlock Text="{DynamicResource Tools.Colors}" FontWeight="SemiBold" Margin="4,12,4,5" />
+                <UniformGrid Columns="2"><ComboBox x:Name="TextColorPicker" SelectionChanged="TextColor_SelectionChanged"><ComboBoxItem Content="{DynamicResource Tools.TextColor}" IsSelected="True"/><ComboBoxItem Content="{DynamicResource Tools.Black}" Tag="#202020"/><ComboBoxItem Content="{DynamicResource Tools.Red}" Tag="#B42318"/><ComboBoxItem Content="{DynamicResource Tools.Blue}" Tag="#176B9B"/><ComboBoxItem Content="{DynamicResource Tools.Green}" Tag="#176B62"/></ComboBox><ComboBox x:Name="HighlightColorPicker" SelectionChanged="HighlightColor_SelectionChanged"><ComboBoxItem Content="{DynamicResource Tools.HighlightColor}" IsSelected="True"/><ComboBoxItem Content="{DynamicResource Tools.Yellow}" Tag="#FFF2A8"/><ComboBoxItem Content="{DynamicResource Tools.Green}" Tag="#C9EAD7"/><ComboBoxItem Content="{DynamicResource Tools.Blue}" Tag="#CDE8F6"/></ComboBox></UniformGrid>
+                <TextBlock Text="{DynamicResource Tools.Font}" FontWeight="SemiBold" Margin="4,12,4,5" />
+                <ComboBox x:Name="FontFamilyPicker" SelectionChanged="FontFamily_SelectionChanged" SelectedIndex="0"><ComboBoxItem Content="Georgia"/><ComboBoxItem Content="Times New Roman"/><ComboBoxItem Content="Arial"/><ComboBoxItem Content="Verdana"/></ComboBox>
+                <ComboBox x:Name="FontSizePicker" SelectionChanged="FontSize_SelectionChanged" SelectedIndex="2" Margin="2,6"><ComboBoxItem Content="10"/><ComboBoxItem Content="11"/><ComboBoxItem Content="12"/><ComboBoxItem Content="14"/><ComboBoxItem Content="18"/><ComboBoxItem Content="24"/></ComboBox>
+                <ComboBox x:Name="StylePicker" SelectionChanged="Style_SelectionChanged" SelectedIndex="0" Margin="2,6"><ComboBoxItem Content="{DynamicResource Format.Normal}" Tag="p"/><ComboBoxItem Content="{DynamicResource Format.Heading1}" Tag="h1"/><ComboBoxItem Content="{DynamicResource Format.Heading2}" Tag="h2"/><ComboBoxItem Content="{DynamicResource Format.Heading3}" Tag="h3"/><ComboBoxItem Content="{DynamicResource Format.Heading4}" Tag="h4"/><ComboBoxItem Content="{DynamicResource Format.Heading5}" Tag="h5"/><ComboBoxItem Content="{DynamicResource Format.Heading6}" Tag="h6"/><ComboBoxItem Content="{DynamicResource Format.Quote}" Tag="blockquote"/></ComboBox>
+              </StackPanel></ScrollViewer>
+            </TabItem>
+            <TabItem Header="{DynamicResource Tab.Styles}" IsEnabled="False"><TextBlock Text="Kitap stilleri Aşama 2'de eklenecek." Margin="10" /></TabItem>
+            <TabItem Header="{DynamicResource Tab.Objects}" IsEnabled="False"><TextBlock Text="Nesne paleti" Margin="10" /></TabItem>
+            <TabItem Header="{DynamicResource Tab.Inspector}" IsEnabled="False"><TextBlock Text="Öğe denetçisi Aşama 2'de eklenecek." Margin="10" /></TabItem>
+            <TabItem Header="{DynamicResource Tab.Favorites}" IsEnabled="False"><TextBlock Text="{DynamicResource Tab.Favorites}" Margin="10" /></TabItem>
+          </TabControl>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

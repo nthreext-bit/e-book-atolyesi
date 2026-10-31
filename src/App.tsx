@@ -449,7 +449,7 @@ export default function App() {
       };
 
       // Create project root
-      zip.file("EkitapDuzenleyici.csproj", getFileContent("EkitapDuzenleyici.csproj"));
+      zip.file("EpubAtolyesi.csproj", getFileContent("EpubAtolyesi.csproj"));
       zip.file("App.xaml", getFileContent("App.xaml"));
       zip.file("App.xaml.cs", getFileContent("App.xaml.cs"));
       
@@ -480,7 +480,7 @@ export default function App() {
 
       // Add a handy README file
       const readmeText = `========================================================================
-📚 E-KİTAP DÜZENLEYİCİ - C# WPF (.NET 8) MASAÜSTÜ UYGULAMASI PROJESİ
+📚 EPUB ATÖLYESİ - C# WPF (.NET 8) MASAÜSTÜ UYGULAMASI PROJESİ
 ========================================================================
 
 Bu proje Google AI Studio'da oluşturulmuş, MVVM mimarisinde (CommunityToolkit.Mvvm ile) 
@@ -488,7 +488,7 @@ geliştirilmiş, koyu temaya sahip profesyonel bir e-kitap düzenleme ve isimlen
 masaüstü uygulamasıdır.
 
 KLASÖR YAPISI:
-- /EkitapDuzenleyici.csproj   -> Proje ve Bağımlılık Yapılandırması (.NET 8)
+- /EpubAtolyesi.csproj        -> Proje ve Bağımlılık Yapılandırması (.NET 8)
 - /App.xaml                   -> Uygulama kaynakları ve Dark Theme tanımları
 - /App.xaml.cs                -> Uygulama başlangıç arka plan kodu
 - /Models/BookInfo.cs         -> Kitap veri modeli
@@ -513,7 +513,7 @@ tek bir dosya (standalone win-x64 EXE) halinde yayınlamak için aşağıdaki ko
    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true
 
 Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasörü içinde 
-"EkitapDuzenleyici.exe" dosyanız hazır olacaktır. Onu dilediğiniz bilgisayarda 
+"EpubAtolyesi.exe" dosyanız hazır olacaktır. Onu dilediğiniz bilgisayarda
 çift tıklayarak çalıştırabilirsiniz!
 
 İletişim ve Destek: mgemici84@gmail.com
@@ -525,7 +525,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
       const url = window.URL.createObjectURL(content);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "EkitapDuzenleyici_WPF_Source.zip";
+      link.download = "EpubAtolyesi_WPF_Source.zip";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -594,8 +594,8 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
           <div className="flex items-center gap-3">
             <span className="text-3xl">📚</span>
             <div>
-              <h1 className="text-xl font-bold font-display text-white tracking-wide">E-KİTAP DÜZENLEYİCİ</h1>
-              <p className="text-xs text-zinc-400">C# WPF (.NET 8) Desktop App MVVM Project Builder & Simulator</p>
+              <h1 className="text-xl font-bold font-display text-white tracking-wide">EPUB ATÖLYESİ</h1>
+              <p className="text-xs text-zinc-400">Windows için WYSIWYG EPUB kitap ve bölüm düzenleme ortamı</p>
             </div>
           </div>
 
@@ -661,7 +661,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
               <div className="bg-[#1E1E1E] border-b border-zinc-800 px-4 py-2.5 flex items-center justify-between select-none">
                 <div className="flex items-center gap-2">
                   <span className="text-base">📚</span>
-                  <span className="text-xs font-semibold text-zinc-300 tracking-wide">E-Kitap Düzenleyici &amp; Düzenleyici - .NET 8 MVVM</span>
+                  <span className="text-xs font-semibold text-zinc-300 tracking-wide">EPUB Atölyesi - .NET 8 MVVM</span>
                 </div>
                 {/* Windows Window Controls */}
                 <div className="flex items-center gap-3">
@@ -833,7 +833,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
                     <button 
                       onClick={() => {
                         saveSettingsToMock();
-                        alert('Ayarlar kaydedildi! (%AppData%\\EkitapDuzenleyici\\settings.json simüle edildi)');
+                        alert('Ayarlar kaydedildi! (%AppData%\\EpubAtolyesi\\settings.json simüle edildi)');
                       }}
                       className="text-[10px] text-zinc-500 hover:text-zinc-300 underline flex items-center justify-center gap-1 mx-auto"
                     >
@@ -1277,7 +1277,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
                 {/* Visual root directory icon */}
                 <div className="flex items-center gap-1.5 text-xs text-zinc-400 px-2 py-1 font-semibold">
                   <FolderOpen size={14} className="text-sky-500" />
-                  EkitapDuzenleyici /
+                  EpubAtolyesi /
                 </div>
 
                 <div className="pl-4 space-y-1">
@@ -1431,7 +1431,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
                   <FileText size={16} className="text-sky-400" />
                   <div>
                     <span className="text-xs font-mono text-zinc-200 font-bold block">{selectedFile.name}</span>
-                    <span className="text-[10px] text-zinc-500 font-mono">Yol: EkitapDuzenleyici/{selectedFile.path}</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">Yol: EpubAtolyesi/{selectedFile.path}</span>
                   </div>
                 </div>
                 
@@ -1568,7 +1568,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
                     Derleme tamamlandığında bağımsız, çalıştırılabilir EXE dosyanız aşağıdaki dizinde bulunacaktır:
                     <br />
                     <code className="block mt-1 bg-zinc-950 p-2 rounded text-zinc-200 border border-zinc-800 break-all select-all font-mono">
-                      \EkitapDuzenleyici\bin\Release\net8.0-windows\win-x64\publish\EkitapDuzenleyici.exe
+                      \EpubAtolyesi\bin\Release\net8.0-windows\win-x64\publish\EpubAtolyesi.exe
                     </code>
                     Bu dosyayı dilediğiniz başka bir Windows bilgisayara kopyalayabilir, hiçbir kurulum yapmadan doğrudan kullanabilirsiniz!
                   </p>
@@ -1631,7 +1631,7 @@ Bu işlem bittiğinde, "bin\\Release\\net8.0-windows\\win-x64\\publish\\" klasö
       {/* FOOTER */}
       <footer className="border-t border-zinc-800 bg-[#101010] py-6 px-6 text-center text-xs text-zinc-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span>📚 E-Kitap Düzenleyici &amp; Organizatör Projesi — Tüm Hakları Saklıdır © 2026</span>
+          <span>📚 EPUB Atölyesi — Tüm Hakları Saklıdır © 2026</span>
           <div className="flex gap-4">
             <span>Geliştirici: <b>mgemici84@gmail.com</b></span>
             <span>|</span>
