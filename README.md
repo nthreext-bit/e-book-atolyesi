@@ -1,20 +1,67 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# EPUB Atölyesi
 
-# Run and deploy your AI Studio app
+EPUB 2 ve EPUB 3 kitaplarını açıp bölüm içeriklerini düzenlemek için geliştirilen Windows masaüstü editörü ve etkileşimli web prototipi.
 
-This contains everything you need to run your app locally.
+![EPUB Atölyesi üç panelli bölüm düzenleyicisi](assets/epub-workspace.svg)
 
-View your app in AI Studio: https://ai.studio/apps/dcbc5d71-6c76-4b5c-a3bc-8fb90ed1b05f
+Masaüstü sürümü C#/.NET 8 WPF, MVVM ve WebView2 tabanlı `contentEditable` düzenleyici kullanır. EPUB içindeki XHTML bölümleri doğrudan düzenlenir; amaç yalnızca kitap metadata'sını değil, kitap metnini de düzenlemektir.
 
-## Run Locally
+## Proje Yapısı
 
-**Prerequisites:**  Node.js
+```text
+desktop/             Windows WPF uygulaması
+  Core/              EPUB paketini açma, düzenleme ve kaydetme
+  Editor/            WebView2 WYSIWYG belge yüzeyi
+  Infrastructure/    Ayarlar ve AppData günlükleri
+  Localization/      Türkçe ve İngilizce .resx kaynakları
+  ViewModels/        CommunityToolkit.Mvvm uygulama durumu
+desktop.Tests/       EPUB2/EPUB3 paket testleri
+src/                 Vite tabanlı prototip ve C# örnek proje gezgini
+assets/              Proje görselleri
+```
 
+## Masaüstü Uygulaması
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Gereksinimler: Windows 10/11, .NET 8 SDK ve Microsoft Edge WebView2 Runtime. Uygulama self-contained yayımlansa da WebView2 Runtime ayrıca gerekir; eksikse indirme bağlantısı gösterilir.
+
+Depo kökünden derleyip çalıştır:
+
+```powershell
+dotnet restore desktop/EpubStudio.csproj
+dotnet build desktop/EpubStudio.csproj --configuration Release
+dotnet run --project desktop/EpubStudio.csproj
+```
+
+Tek dosya, self-contained x64 EXE:
+
+```powershell
+dotnet publish desktop/EpubStudio.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+```
+
+Çıktı: `desktop/bin/Release/net8.0-windows/win-x64/publish/EpubAtolyesi.exe`.
+
+## Web Prototipi
+
+Node.js kurulu olmalı. Depo kökünde:
+
+```powershell
+npm install
+npm run dev
+```
+
+Kontroller:
+
+```powershell
+npm run lint
+npm run build
+```
+
+## Testler
+
+EPUB2 ve EPUB3 örnek paketleriyle değiştirmeden aç-kaydet-yeniden aç, bilinmeyen OPF/arşiv verisini koruma, XHTML düzenleme, resim ekleme, bölüm sıralama/silme/yeniden adlandırma ve yedekleme testleri:
+
+```powershell
+dotnet test desktop.Tests/EpubStudio.Tests.csproj --configuration Release
+```
+
+Ayrıntılı masaüstü kurulum ve özellik notları [`desktop/README.md`](desktop/README.md) dosyasında.
