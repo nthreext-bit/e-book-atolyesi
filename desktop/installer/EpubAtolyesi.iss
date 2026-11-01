@@ -30,7 +30,7 @@ CloseApplications=yes
 Name: "desktopicon"; Description: "Masaüstü kısayolu oluştur"; GroupDescription: "Ek görevler:"; Flags: unchecked
 
 [Files]
-Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs uninsdelete uninsrestartdelete uninsremovereadonly
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs uninsrestartdelete uninsremovereadonly
 Source: "{#WebView2Bootstrapper}"; Flags: dontcopy
 
 [Icons]
