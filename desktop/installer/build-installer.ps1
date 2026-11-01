@@ -14,6 +14,8 @@ $publishDirectory = Join-Path $installerDirectory 'build\publish'
 $prerequisiteDirectory = Join-Path $installerDirectory 'build\prerequisites'
 $bootstrapperPath = Join-Path $prerequisiteDirectory 'MicrosoftEdgeWebView2Setup.exe'
 $signingCertificatePath = Join-Path $prerequisiteDirectory 'CodeSigningCertificate.pfx'
+$signingKeyPath = Join-Path $prerequisiteDirectory 'CodeSigningPrivateKey.pem'
+$signingPemPath = Join-Path $prerequisiteDirectory 'CodeSigningCertificate.pem'
 $outputDirectory = Join-Path $installerDirectory 'dist'
 
 New-Item -ItemType Directory -Force -Path $prerequisiteDirectory, $outputDirectory | Out-Null
@@ -23,8 +25,7 @@ $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
 $hasSigningPassword = -not [string]::IsNullOrWhiteSpace($certificatePassword)
-$selfSignedCertificate = $null
-$signingThumbprint = $null
+$temporaryTrustThumbprint = $null
 $temporaryTrustInstalled = $false
 if ($hasSigningCertificate -ne $hasSigningPassword) {
     throw 'Set both WINDOWS_SIGNING_CERTIFICATE_BASE64 and WINDOWS_SIGNING_PASSWORD to sign the installer.'
@@ -55,21 +56,50 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         throw 'Windows SDK signtool.exe was not found.'
     }
     if ($SelfSignedSigning) {
-        Write-Output 'Creating temporary self-signed code-signing certificate...'
-        $selfSignedCertificate = New-SelfSignedCertificate `
-            -Type CodeSigningCert `
-            -Subject 'CN=EPUB Atölyesi (Self-Signed)' `
-            -CertStoreLocation 'Cert:\CurrentUser\My' `
-            -KeyAlgorithm RSA `
-            -KeyLength 3072 `
-            -HashAlgorithm SHA256 `
-            -NotAfter (Get-Date).AddYears(2)
-        $signingThumbprint = $selfSignedCertificate.Thumbprint
+        Write-Output 'Creating temporary self-signed code-signing certificate with OpenSSL...'
+        $openSslCommand = Get-Command 'openssl.exe' -ErrorAction SilentlyContinue
+        if ($openSslCommand) {
+            $openSsl = $openSslCommand.Source
+        }
+        else {
+            $openSsl = Join-Path $env:ProgramFiles 'Git\usr\bin\openssl.exe'
+        }
+        if (-not (Test-Path $openSsl)) {
+            throw 'OpenSSL was not found on the Windows runner.'
+        }
+
+        $certificatePassword = [Guid]::NewGuid().ToString('N') + [Guid]::NewGuid().ToString('N')
+        & $openSsl req -x509 -newkey rsa:3072 -nodes `
+            -keyout $signingKeyPath `
+            -out $signingPemPath `
+            -days 730 `
+            -subj '/CN=EPUB Atölyesi (Self-Signed)' `
+            -addext 'keyUsage=digitalSignature' `
+            -addext 'extendedKeyUsage=codeSigning'
+        if ($LASTEXITCODE -ne 0) {
+            throw "OpenSSL certificate creation failed with exit code $LASTEXITCODE."
+        }
+
+        & $openSsl pkcs12 -export `
+            -out $signingCertificatePath `
+            -inkey $signingKeyPath `
+            -in $signingPemPath `
+            -passout "pass:$certificatePassword"
+        if ($LASTEXITCODE -ne 0) {
+            throw "OpenSSL PFX creation failed with exit code $LASTEXITCODE."
+        }
+
         $publicCertificatePath = Join-Path $outputDirectory "EpubAtolyesi-SelfSigned-v$AppVersion.cer"
-        Export-Certificate -Cert $selfSignedCertificate -FilePath $publicCertificatePath | Out-Null
-        Import-Certificate -FilePath $publicCertificatePath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null
+        & $openSsl x509 -in $signingPemPath -outform DER -out $publicCertificatePath
+        if ($LASTEXITCODE -ne 0) {
+            throw "OpenSSL public certificate export failed with exit code $LASTEXITCODE."
+        }
+        $trustedCertificate = Import-Certificate `
+            -FilePath $publicCertificatePath `
+            -CertStoreLocation 'Cert:\CurrentUser\Root'
+        $temporaryTrustThumbprint = $trustedCertificate.Thumbprint
         $temporaryTrustInstalled = $true
-        Write-Output "Temporary signing certificate created: $($selfSignedCertificate.Thumbprint)"
+        Write-Output "Temporary signing certificate created: $temporaryTrustThumbprint"
     }
     elseif ($hasSigningCertificate) {
         [System.IO.File]::WriteAllBytes(
@@ -79,24 +109,13 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
 }
 
 function Sign-Executable([string]$Path) {
-    if ($signingThumbprint) {
-        & $signTool sign `
-            /s My `
-            /sha1 $signingThumbprint `
-            /fd SHA256 `
-            /tr 'http://timestamp.digicert.com' `
-            /td SHA256 `
-            $Path
-    }
-    else {
-        & $signTool sign `
-            /f $signingCertificatePath `
-            /p $certificatePassword `
-            /fd SHA256 `
-            /tr 'http://timestamp.digicert.com' `
-            /td SHA256 `
-            $Path
-    }
+    & $signTool sign `
+        /f $signingCertificatePath `
+        /p $certificatePassword `
+        /fd SHA256 `
+        /tr 'http://timestamp.digicert.com' `
+        /td SHA256 `
+        $Path
     if ($LASTEXITCODE -ne 0) {
         throw "Authenticode signing failed for $Path with exit code $LASTEXITCODE."
     }
@@ -118,7 +137,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-if ($hasSigningCertificate) {
+if ($hasSigningCertificate -or $SelfSignedSigning) {
     Sign-Executable (Join-Path $publishDirectory 'EpubAtolyesi.exe')
 }
 
@@ -161,7 +180,7 @@ if (-not (Test-Path $installerPath)) {
     throw "Expected installer was not created: $installerPath"
 }
 
-if ($hasSigningCertificate) {
+if ($hasSigningCertificate -or $SelfSignedSigning) {
     Sign-Executable $installerPath
 }
 
@@ -172,9 +191,11 @@ finally {
         Remove-Item -LiteralPath $signingCertificatePath -Force
     }
     if ($temporaryTrustInstalled) {
-        Remove-Item "Cert:\CurrentUser\Root\$signingThumbprint" -Force
+        Remove-Item "Cert:\CurrentUser\Root\$temporaryTrustThumbprint" -Force
     }
-    if ($selfSignedCertificate) {
-        Remove-Item "Cert:\CurrentUser\My\$signingThumbprint" -Force
+    foreach ($temporaryFile in @($signingCertificatePath, $signingKeyPath, $signingPemPath)) {
+        if (Test-Path $temporaryFile) {
+            Remove-Item -LiteralPath $temporaryFile -Force
+        }
     }
 }
