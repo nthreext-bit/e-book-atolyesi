@@ -25,7 +25,7 @@ $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
 $hasSigningPassword = -not [string]::IsNullOrWhiteSpace($certificatePassword)
-$temporaryTrustThumbprint = $null
+$publicCertificate = $null
 $temporaryTrustInstalled = $false
 if ($hasSigningCertificate -ne $hasSigningPassword) {
     throw 'Set both WINDOWS_SIGNING_CERTIFICATE_BASE64 and WINDOWS_SIGNING_PASSWORD to sign the installer.'
@@ -99,15 +99,20 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         }
         $publicCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($publicCertificatePath)
         $selfSignedThumbprint = $publicCertificate.Thumbprint
-        $publicCertificate.Dispose()
         Write-Output "Public signing certificate exported: $selfSignedThumbprint"
         Write-Output 'Temporarily trusting the signing certificate for signature verification...'
-        & certutil.exe -user -addstore -f Root $publicCertificatePath
-        if ($LASTEXITCODE -ne 0) {
-            throw "Temporary certificate trust setup failed with exit code $LASTEXITCODE."
+        $certificateStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+            [System.Security.Cryptography.X509Certificates.StoreName]::Root,
+            [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+        $certificateStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+        try {
+            $certificateStore.Add($publicCertificate)
+            $temporaryTrustInstalled = $true
         }
-        $temporaryTrustThumbprint = $selfSignedThumbprint
-        $temporaryTrustInstalled = $true
+        finally {
+            $certificateStore.Close()
+        }
+        Write-Output 'Temporary signing certificate trust setup completed.'
     }
     elseif ($hasSigningCertificate) {
         [System.IO.File]::WriteAllBytes(
@@ -207,10 +212,19 @@ Write-Output "Installer created: $installerPath"
 }
 finally {
     if ($temporaryTrustInstalled) {
-        & certutil.exe -user -delstore Root $temporaryTrustThumbprint
-        if ($LASTEXITCODE -ne 0) {
-            throw "Temporary certificate cleanup failed with exit code $LASTEXITCODE."
+        $certificateStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+            [System.Security.Cryptography.X509Certificates.StoreName]::Root,
+            [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+        $certificateStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+        try {
+            $certificateStore.Remove($publicCertificate)
         }
+        finally {
+            $certificateStore.Close()
+        }
+    }
+    if ($publicCertificate) {
+        $publicCertificate.Dispose()
     }
     foreach ($temporaryFile in @($signingCertificatePath, $signingKeyPath, $signingPemPath)) {
         if (Test-Path $temporaryFile) {
