@@ -102,12 +102,11 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         $publicCertificate.Dispose()
         Write-Output "Public signing certificate exported: $selfSignedThumbprint"
         Write-Output 'Temporarily trusting the signing certificate for signature verification...'
-        $trustedCertificate = Import-Certificate `
-            -FilePath $publicCertificatePath `
-            -CertStoreLocation 'Cert:\CurrentUser\Root' `
-            -Confirm:$false `
-            -ErrorAction Stop
-        $temporaryTrustThumbprint = $trustedCertificate.Thumbprint
+        & certutil.exe -user -addstore -f Root $publicCertificatePath
+        if ($LASTEXITCODE -ne 0) {
+            throw "Temporary certificate trust setup failed with exit code $LASTEXITCODE."
+        }
+        $temporaryTrustThumbprint = $selfSignedThumbprint
         $temporaryTrustInstalled = $true
     }
     elseif ($hasSigningCertificate) {
@@ -208,7 +207,10 @@ Write-Output "Installer created: $installerPath"
 }
 finally {
     if ($temporaryTrustInstalled) {
-        Remove-Item "Cert:\CurrentUser\Root\$temporaryTrustThumbprint" -Force -ErrorAction Stop
+        & certutil.exe -user -delstore Root $temporaryTrustThumbprint
+        if ($LASTEXITCODE -ne 0) {
+            throw "Temporary certificate cleanup failed with exit code $LASTEXITCODE."
+        }
     }
     foreach ($temporaryFile in @($signingCertificatePath, $signingKeyPath, $signingPemPath)) {
         if (Test-Path $temporaryFile) {
