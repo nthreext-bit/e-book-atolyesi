@@ -25,8 +25,6 @@ $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
 $hasSigningPassword = -not [string]::IsNullOrWhiteSpace($certificatePassword)
-$publicCertificate = $null
-$temporaryTrustInstalled = $false
 if ($hasSigningCertificate -ne $hasSigningPassword) {
     throw 'Set both WINDOWS_SIGNING_CERTIFICATE_BASE64 and WINDOWS_SIGNING_PASSWORD to sign the installer.'
 }
@@ -98,21 +96,13 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
             throw "OpenSSL public certificate export failed with exit code $LASTEXITCODE."
         }
         $publicCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($publicCertificatePath)
-        $selfSignedThumbprint = $publicCertificate.Thumbprint
-        Write-Output "Public signing certificate exported: $selfSignedThumbprint"
-        Write-Output 'Temporarily trusting the signing certificate for signature verification...'
-        $certificateStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
-            [System.Security.Cryptography.X509Certificates.StoreName]::Root,
-            [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
-        $certificateStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
         try {
-            $certificateStore.Add($publicCertificate)
-            $temporaryTrustInstalled = $true
+            $selfSignedThumbprint = $publicCertificate.Thumbprint
         }
         finally {
-            $certificateStore.Close()
+            $publicCertificate.Dispose()
         }
-        Write-Output 'Temporary signing certificate trust setup completed.'
+        Write-Output "Public signing certificate exported: $selfSignedThumbprint"
     }
     elseif ($hasSigningCertificate) {
         [System.IO.File]::WriteAllBytes(
@@ -136,9 +126,14 @@ function Sign-Executable([string]$Path) {
     $isExpectedSelfSigned = $SelfSignedSigning -and
         $signature.SignerCertificate -and
         $signature.SignerCertificate.Thumbprint -eq $selfSignedThumbprint
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
-        ($SelfSignedSigning -and -not $isExpectedSelfSigned)) {
-        throw "Authenticode signature verification failed for ${Path}: $($signature.Status)."
+    $selfSignedStatusIsAcceptable = $signature.Status -in @(
+        [System.Management.Automation.SignatureStatus]::Valid,
+        [System.Management.Automation.SignatureStatus]::NotTrusted,
+        [System.Management.Automation.SignatureStatus]::UnknownError)
+    if (($SelfSignedSigning -and (-not $isExpectedSelfSigned -or -not $selfSignedStatusIsAcceptable)) -or
+        (-not $SelfSignedSigning -and
+            $signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid)) {
+        throw "Authenticode signature verification failed for ${Path}: $($signature.Status) - $($signature.StatusMessage)."
     }
 }
 
@@ -211,21 +206,6 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
 Write-Output "Installer created: $installerPath"
 }
 finally {
-    if ($temporaryTrustInstalled) {
-        $certificateStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
-            [System.Security.Cryptography.X509Certificates.StoreName]::Root,
-            [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
-        $certificateStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-        try {
-            $certificateStore.Remove($publicCertificate)
-        }
-        finally {
-            $certificateStore.Close()
-        }
-    }
-    if ($publicCertificate) {
-        $publicCertificate.Dispose()
-    }
     foreach ($temporaryFile in @($signingCertificatePath, $signingKeyPath, $signingPemPath)) {
         if (Test-Path $temporaryFile) {
             Remove-Item -LiteralPath $temporaryFile -Force
