@@ -8,6 +8,8 @@ public sealed class EpubBook : IDisposable
     public required string Title { get; set; }
     public List<EpubSection> Sections { get; } = [];
     public List<EpubResource> Resources { get; } = [];
+    public List<EpubTocEntry> TableOfContents { get; } = [];
+    public EpubMetadata Metadata { get; set; } = new();
     public bool IsPackageDirty { get; set; }
     public bool IsDirty => IsPackageDirty || Sections.Any(section => section.IsDirty);
 

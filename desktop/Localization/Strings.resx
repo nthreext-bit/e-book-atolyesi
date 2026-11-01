@@ -180,4 +180,85 @@
   <data name="Format.IndentTooltip" xml:space="preserve"><value>Girintiyi artır</value></data>
   <data name="Format.OutdentTooltip" xml:space="preserve"><value>Girintiyi azalt</value></data>
   <data name="Editor.StartTyping" xml:space="preserve"><value>Yazmaya başlayın...</value></data>
+  <data name="Tab.Toc" xml:space="preserve"><value>İçindekiler</value></data>
+  <data name="Tab.Results" xml:space="preserve"><value>Arama sonuçları</value></data>
+  <data name="Editor.Source" xml:space="preserve"><value>Kaynak</value></data>
+  <data name="Editor.Wysiwyg" xml:space="preserve"><value>Görsel düzenleyici</value></data>
+  <data name="Tools.ParagraphType" xml:space="preserve"><value>Paragraf türü</value></data>
+  <data name="Tools.Bookmark" xml:space="preserve"><value>Yer imi</value></data>
+  <data name="Tools.BookmarkPrompt" xml:space="preserve"><value>Yer imi kimliği:</value></data>
+  <data name="Tools.InternalLink" xml:space="preserve"><value>Kitap içi bağlantı</value></data>
+  <data name="Tools.InternalLinkPrompt" xml:space="preserve"><value>Hedef yer imi kimliği:</value></data>
+  <data name="Tools.PageBreak" xml:space="preserve"><value>Sayfa sonu</value></data>
+  <data name="Tools.Footnote" xml:space="preserve"><value>Dipnot</value></data>
+  <data name="Tools.SourceTitle" xml:space="preserve"><value>Kaynak XHTML</value></data>
+  <data name="Tools.SourceXmlError" xml:space="preserve"><value>XHTML geçerli XML değil. Hata: {0}</value></data>
+  <data name="Tools.ReplaceAllConfirm" xml:space="preserve"><value>Tüm kitapta eşleşen metin değiştirilecek. Devam edilsin mi?</value></data>
+  <data name="Tools.ReplaceCount" xml:space="preserve"><value>{0} eşleşme değiştirildi.</value></data>
+  <data name="Tools.SearchCount" xml:space="preserve"><value>{0} arama sonucu bulundu.</value></data>
+  <data name="Book.Metadata" xml:space="preserve"><value>Kitap üst verileri...</value></data>
+  <data name="Book.GenerateToc" xml:space="preserve"><value>Başlıklardan içindekiler oluştur</value></data>
+  <data name="Book.SplitSection" xml:space="preserve"><value>İmleçten böl...</value></data>
+  <data name="Book.MergeSection" xml:space="preserve"><value>Sonraki bölümle birleştir</value></data>
+  <data name="Toc.MoveUp" xml:space="preserve"><value>Yukarı taşı</value></data>
+  <data name="Toc.MoveDown" xml:space="preserve"><value>Aşağı taşı</value></data>
+  <data name="Toc.Indent" xml:space="preserve"><value>Girintiyi artır</value></data>
+  <data name="Toc.Outdent" xml:space="preserve"><value>Girintiyi azalt</value></data>
+  <data name="Toc.Rename" xml:space="preserve"><value>Adlandır</value></data>
+  <data name="Toc.RenamePrompt" xml:space="preserve"><value>İçindekilerde gösterilecek başlık:</value></data>
+  <data name="Styles.New" xml:space="preserve"><value>Yeni</value></data>
+  <data name="Styles.Edit" xml:space="preserve"><value>Düzenle</value></data>
+  <data name="Styles.Delete" xml:space="preserve"><value>Sil</value></data>
+  <data name="Styles.Apply" xml:space="preserve"><value>Uygula</value></data>
+  <data name="Styles.DeletePrompt" xml:space="preserve"><value>'{0}' stili silinsin mi?</value></data>
+  <data name="Inspector.Tag" xml:space="preserve"><value>Etiket</value></data>
+  <data name="Inspector.Apply" xml:space="preserve"><value>Öğeye uygula</value></data>
+  <data name="Tools.SplitRequiresEditor" xml:space="preserve"><value>Bölüm, WYSIWYG düzenleyicide imleç konumundan bölünmelidir.</value></data>
+  <data name="Tools.FeatureError" xml:space="preserve"><value>İşlem tamamlanamadı: {0}</value></data>
+  <data name="Tools.ErrorTitle" xml:space="preserve"><value>İşlem hatası</value></data>
+  <data name="Book.SetCover" xml:space="preserve"><value>Kapak resmi ayarla...</value></data>
+  <data name="Dialog.CoverImage" xml:space="preserve"><value>Kapak resmi seçin</value></data>
+  <data name="Tools.UnusedScanError" xml:space="preserve"><value>Kullanılmayan dosyalar denetlenemedi: {0}</value></data>
+  <data name="Dialog.Ok" xml:space="preserve"><value>Tamam</value></data>
+  <data name="Dialog.Cancel" xml:space="preserve"><value>İptal</value></data>
+  <data name="Metadata.Title" xml:space="preserve"><value>Kitap üst verileri</value></data>
+  <data name="Metadata.TitleField" xml:space="preserve"><value>Başlık</value></data>
+  <data name="Metadata.CreatorsField" xml:space="preserve"><value>Yazarlar ve roller (her satır: aut|Ad Soyad)</value></data>
+  <data name="Metadata.PublisherField" xml:space="preserve"><value>Yayınevi</value></data>
+  <data name="Metadata.LanguageField" xml:space="preserve"><value>Dil</value></data>
+  <data name="Metadata.DescriptionField" xml:space="preserve"><value>Açıklama</value></data>
+  <data name="Metadata.IdentifierField" xml:space="preserve"><value>Tanımlayıcı / ISBN</value></data>
+  <data name="Metadata.DateField" xml:space="preserve"><value>Tarih</value></data>
+  <data name="Metadata.SubjectsField" xml:space="preserve"><value>Konular (; ile ayırın)</value></data>
+  <data name="Metadata.RightsField" xml:space="preserve"><value>Haklar</value></data>
+  <data name="Metadata.SeriesField" xml:space="preserve"><value>Seri adı</value></data>
+  <data name="Metadata.SeriesIndexField" xml:space="preserve"><value>Seri sıra numarası</value></data>
+  <data name="Styles.NewTitle" xml:space="preserve"><value>Yeni stil</value></data>
+  <data name="Styles.EditTitle" xml:space="preserve"><value>Stili düzenle</value></data>
+  <data name="Styles.CharacterStyle" xml:space="preserve"><value>Karakter stili (seçili metne uygula)</value></data>
+  <data name="Styles.Name" xml:space="preserve"><value>Görünen ad</value></data>
+  <data name="Styles.Class" xml:space="preserve"><value>CSS sınıfı (ör. alinti)</value></data>
+  <data name="Styles.FontFamily" xml:space="preserve"><value>Yazı tipi</value></data>
+  <data name="Styles.FontSize" xml:space="preserve"><value>Boyut (ör. 1.1em)</value></data>
+  <data name="Styles.Color" xml:space="preserve"><value>Renk (ör. #333333)</value></data>
+  <data name="Styles.FontWeight" xml:space="preserve"><value>Kalınlık (normal/bold)</value></data>
+  <data name="Styles.FontStyle" xml:space="preserve"><value>İtalik (normal/italic)</value></data>
+  <data name="Styles.Alignment" xml:space="preserve"><value>Hizalama</value></data>
+  <data name="Styles.TextIndent" xml:space="preserve"><value>İlk satır girintisi</value></data>
+  <data name="Styles.LineHeight" xml:space="preserve"><value>Satır aralığı</value></data>
+  <data name="Styles.MarginTop" xml:space="preserve"><value>Paragraf öncesi boşluk</value></data>
+  <data name="Styles.MarginBottom" xml:space="preserve"><value>Paragraf sonrası boşluk</value></data>
+  <data name="Find.Title" xml:space="preserve"><value>Kitapta bul</value></data>
+  <data name="Find.Search" xml:space="preserve"><value>Bul</value></data>
+  <data name="Find.MatchCase" xml:space="preserve"><value>Büyük/küçük harfe duyarlı</value></data>
+  <data name="Find.WholeWord" xml:space="preserve"><value>Tam kelime</value></data>
+  <data name="Find.Regex" xml:space="preserve"><value>Normal ifade (regex)</value></data>
+  <data name="Find.WholeBook" xml:space="preserve"><value>Tüm kitapta ara</value></data>
+  <data name="Replace.Title" xml:space="preserve"><value>Bul ve değiştir</value></data>
+  <data name="Replace.With" xml:space="preserve"><value>Değiştir</value></data>
+  <data name="Replace.WholeBook" xml:space="preserve"><value>Tüm kitapta ara/değiştir</value></data>
+  <data name="Paste.Title" xml:space="preserve"><value>Yapıştırma biçimi</value></data>
+  <data name="Paste.Clean" xml:space="preserve"><value>Temizle ve kitap stiline uydur</value></data>
+  <data name="Paste.Preserve" xml:space="preserve"><value>Biçimi koru</value></data>
+  <data name="Paste.Plain" xml:space="preserve"><value>Sadece metin</value></data>
 </root>

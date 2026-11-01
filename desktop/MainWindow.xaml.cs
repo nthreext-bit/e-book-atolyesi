@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Xml.Linq;
+using System.Xml;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -8,6 +10,7 @@ using KitaplikEditoru.Editor;
 using KitaplikEditoru.Infrastructure;
 using KitaplikEditoru.Localization;
 using KitaplikEditoru.ViewModels;
+using ICSharpCode.AvalonEdit.Highlighting;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 
@@ -24,11 +27,17 @@ public partial class MainWindow : Window
     private Point _dragStart;
     private bool _allowClose;
     private bool _closePromptOpen;
+    private bool _sourceMode;
+    private bool _updatingSource;
+    private string? _pendingTocFragment;
+    private string? _pendingTocSectionId;
+    private string? _pendingFindText;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _viewModel;
+        SourceEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("XML");
         LeftPanelToggle.Checked += LeftPanel_Changed;
         LeftPanelToggle.Unchecked += LeftPanel_Changed;
         PalettePanelToggle.Checked += PalettePanel_Changed;
@@ -46,6 +55,13 @@ public partial class MainWindow : Window
             }
             if (args.PropertyName is nameof(EditorViewModel.CurrentSection) or nameof(EditorViewModel.HasBook))
             {
+                if (args.PropertyName == nameof(EditorViewModel.CurrentSection) && _sourceMode)
+                {
+                    _loadedSectionId = _viewModel.CurrentSection?.Id;
+                    _sourceMode = false;
+                    SourceModeButton.Content = Strings.Get("Editor.Source");
+                    SourceEditor.Visibility = Visibility.Collapsed;
+                }
                 UpdateEditorVisibility();
                 if (args.PropertyName == nameof(EditorViewModel.CurrentSection))
                 {
@@ -128,6 +144,18 @@ public partial class MainWindow : Window
             var sectionId = JsonSerializer.Serialize(section.Id);
             await EditorWebView.ExecuteScriptAsync($"setContent({content}, {sectionId});");
             _loadedSectionId = section.Id;
+            if (_pendingTocSectionId == section.Id && _pendingTocFragment is not null)
+            {
+                await EditorWebView.ExecuteScriptAsync($"navigateToFragment({JsonSerializer.Serialize(_pendingTocFragment)});");
+                _pendingTocFragment = null;
+                _pendingTocSectionId = null;
+            }
+            if (_pendingTocSectionId == section.Id && _pendingFindText is not null)
+            {
+                await EditorWebView.ExecuteScriptAsync($"findText({JsonSerializer.Serialize(_pendingFindText)});");
+                _pendingFindText = null;
+                _pendingTocSectionId = null;
+            }
         }
         catch (Exception exception)
         {
@@ -178,6 +206,13 @@ public partial class MainWindow : Window
             {
                 await SaveDocumentAsync();
             }
+            else if (type == "inspector")
+            {
+                InspectorTag.Text = message.RootElement.GetProperty("tag").GetString() ?? string.Empty;
+                InspectorClass.Text = message.RootElement.GetProperty("className").GetString() ?? string.Empty;
+                InspectorId.Text = message.RootElement.GetProperty("id").GetString() ?? string.Empty;
+                InspectorStyle.Text = message.RootElement.GetProperty("style").GetString() ?? string.Empty;
+            }
         }
         catch (Exception exception)
         {
@@ -188,7 +223,8 @@ public partial class MainWindow : Window
     private void UpdateEditorVisibility()
     {
         var hasSection = _viewModel.CurrentSection is not null;
-        EditorWebView.Visibility = _webViewReady && hasSection ? Visibility.Visible : Visibility.Collapsed;
+        EditorWebView.Visibility = _webViewReady && hasSection && !_sourceMode ? Visibility.Visible : Visibility.Collapsed;
+        SourceEditor.Visibility = hasSection && _sourceMode ? Visibility.Visible : Visibility.Collapsed;
         NoBookPanel.Visibility = !_viewModel.HasBook && WebViewWarning.Visibility != Visibility.Visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -446,6 +482,8 @@ public partial class MainWindow : Window
         {
             var source = await _viewModel.AddImageAsync(dialog.FileName);
             await ExecuteEditorScriptAsync($"insertImage({JsonSerializer.Serialize(source)});");
+            await CaptureEditorContentAsync();
+            await _viewModel.RefreshResourceUsageAsync();
         }
         catch (Exception exception)
         {
@@ -462,6 +500,23 @@ public partial class MainWindow : Window
     {
         await ExecuteEditorScriptAsync("formatText('insertHTML', '<table><tbody><tr><td> </td><td> </td></tr><tr><td> </td><td> </td></tr></tbody></table><p></p>');");
     }
+
+    private async void Bookmark_Click(object sender, RoutedEventArgs e)
+    {
+        var id = Microsoft.VisualBasic.Interaction.InputBox(Strings.Get("Tools.BookmarkPrompt"), Strings.Get("Tools.Bookmark"));
+        if (!string.IsNullOrWhiteSpace(id))
+            await ExecuteEditorScriptAsync($"insertBookmark({JsonSerializer.Serialize(id)});");
+    }
+
+    private async void InternalLink_Click(object sender, RoutedEventArgs e)
+    {
+        var id = Microsoft.VisualBasic.Interaction.InputBox(Strings.Get("Tools.InternalLinkPrompt"), Strings.Get("Tools.InternalLink"));
+        if (!string.IsNullOrWhiteSpace(id))
+            await ExecuteEditorScriptAsync($"insertInternalLink({JsonSerializer.Serialize(id)});");
+    }
+
+    private async void PageBreak_Click(object sender, RoutedEventArgs e) => await ExecuteEditorScriptAsync("insertPageBreak();");
+    private async void Footnote_Click(object sender, RoutedEventArgs e) => await ExecuteEditorScriptAsync("insertFootnote();");
 
     private async void FontFamily_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -496,22 +551,46 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void Style_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void ParagraphStyle_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (StylePicker.SelectedItem is ComboBoxItem { Tag: string tag })
+        if (ParagraphTypePicker.SelectedItem is ComboBoxItem { Tag: string tag })
         {
             await ExecuteEditorScriptAsync($"setBlock({JsonSerializer.Serialize(tag)});");
         }
     }
 
+    private async void Style_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (StylePicker.SelectedItem is EpubStyle style)
+        {
+            await ExecuteEditorScriptAsync($"applyStyle({JsonSerializer.Serialize(style.ClassName)}, {(style.IsCharacterStyle ? "true" : "false")});");
+        }
+    }
+
     private async void Paste_Click(object sender, RoutedEventArgs e)
     {
-        if (!Clipboard.ContainsText())
-        {
-            return;
-        }
+        var hasPlainText = Clipboard.ContainsText();
+        var hasHtml = Clipboard.ContainsText(TextDataFormat.Html);
+        if (!hasPlainText && !hasHtml) return;
 
-        await ExecuteEditorScriptAsync($"pasteText({JsonSerializer.Serialize(Clipboard.GetText())});");
+        var mode = FeatureDialogs.ChoosePasteMode(this);
+        if (mode is null) return;
+        var isHtml = hasHtml && (mode != "plain" || !hasPlainText);
+        var text = isHtml
+            ? ExtractClipboardHtml(Clipboard.GetText(TextDataFormat.Html))
+            : hasPlainText ? Clipboard.GetText() : Clipboard.GetText(TextDataFormat.Html);
+        await ExecuteEditorScriptAsync($"pasteText({JsonSerializer.Serialize(text)}, {JsonSerializer.Serialize(mode)}, {(isHtml ? "true" : "false")});");
+    }
+
+    private static string ExtractClipboardHtml(string clipboardHtml)
+    {
+        const string start = "<!--StartFragment-->";
+        const string end = "<!--EndFragment-->";
+        var startIndex = clipboardHtml.IndexOf(start, StringComparison.OrdinalIgnoreCase);
+        var endIndex = clipboardHtml.IndexOf(end, StringComparison.OrdinalIgnoreCase);
+        return startIndex >= 0 && endIndex > startIndex
+            ? clipboardHtml[(startIndex + start.Length)..endIndex]
+            : clipboardHtml;
     }
 
     private void CloseSectionTab_Click(object sender, RoutedEventArgs e)
@@ -520,6 +599,236 @@ public partial class MainWindow : Window
         {
             _viewModel.CloseSection(section);
         }
+    }
+
+    private async void SourceMode_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.CurrentSection is null) return;
+        if (!_sourceMode)
+        {
+            await CaptureEditorContentAsync();
+            _updatingSource = true;
+            SourceEditor.Text = _viewModel.CurrentSection.ContentXhtml;
+            _updatingSource = false;
+            _sourceMode = true;
+            SourceModeButton.Content = Strings.Get("Editor.Wysiwyg");
+            UpdateEditorVisibility();
+            SourceEditor.Focus();
+            return;
+        }
+
+        try
+        {
+            ValidateSourceXhtml(SourceEditor.Text);
+            _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id, SourceEditor.Text);
+            _sourceMode = false;
+            SourceModeButton.Content = Strings.Get("Editor.Source");
+            UpdateEditorVisibility();
+            await LoadCurrentSectionAsync();
+        }
+        catch (XmlException exception)
+        {
+            MessageBox.Show(this, Strings.Format("Tools.SourceXmlError", exception.Message),
+                Strings.Get("Tools.SourceTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            SourceEditor.Focus();
+        }
+    }
+
+    private void SourceEditor_TextChanged(object sender, EventArgs e)
+    {
+        if (!_sourceMode || _updatingSource || _viewModel.CurrentSection is null) return;
+        _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id, SourceEditor.Text);
+    }
+
+    private static void ValidateSourceXhtml(string source)
+    {
+        _ = XElement.Parse($"<fragment xmlns=\"http://www.w3.org/1999/xhtml\">{source}</fragment>",
+            LoadOptions.PreserveWhitespace);
+    }
+
+    private async void InspectorApply_Click(object sender, RoutedEventArgs e)
+    {
+        var args = new[]
+        {
+            JsonSerializer.Serialize(InspectorTag.Text.Trim().ToLowerInvariant()),
+            JsonSerializer.Serialize(InspectorClass.Text.Trim()),
+            JsonSerializer.Serialize(InspectorId.Text.Trim()),
+            JsonSerializer.Serialize(InspectorStyle.Text.Trim())
+        };
+        await ExecuteEditorScriptAsync($"applyInspector({string.Join(", ", args)});");
+    }
+
+    private void InvisibleCharacters_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_webViewReady)
+            _ = ExecuteEditorScriptAsync($"setInvisibleCharacters({(InvisibleCharactersCheckBox.IsChecked == true ? "true" : "false")});");
+    }
+
+    private void Metadata_Click(object sender, RoutedEventArgs e)
+    {
+        if (!FeatureDialogs.EditMetadata(this, _viewModel.Metadata)) return;
+        try
+        {
+            _viewModel.SaveMetadata();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Metadata save failed");
+        }
+    }
+
+    private async void SetCover_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Title = Strings.Get("Dialog.CoverImage"), Filter = Strings.Get("Dialog.ImagesFilter") };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            var insertedPath = await _viewModel.AddImageAsync(dialog.FileName);
+            var imageName = Path.GetFileName(insertedPath);
+            var cover = _viewModel.Resources.Last(resource => resource.Href.EndsWith(imageName, StringComparison.OrdinalIgnoreCase));
+            _viewModel.SetCoverImage(cover);
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Set cover image failed");
+        }
+    }
+
+    private async void StyleNew_Click(object sender, RoutedEventArgs e) => await EditStyleAsync(null);
+
+    private async void StyleEdit_Click(object sender, RoutedEventArgs e)
+    {
+        if (StylesList.SelectedItem is EpubStyle style) await EditStyleAsync(style);
+    }
+
+    private async Task EditStyleAsync(EpubStyle? original)
+    {
+        var edited = FeatureDialogs.EditStyle(this, original);
+        if (edited is null) return;
+        try
+        {
+            _viewModel.SaveStyle(edited);
+            if (_viewModel.CurrentSection is not null) await LoadCurrentSectionAsync();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Style save failed");
+        }
+    }
+
+    private async void StyleDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (StylesList.SelectedItem is not EpubStyle style) return;
+        if (MessageBox.Show(this, Strings.Format("Styles.DeletePrompt", style.Name), Strings.Get("Styles.Delete"),
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        _viewModel.DeleteStyle(style);
+        if (_viewModel.CurrentSection is not null) await LoadCurrentSectionAsync();
+    }
+
+    private async void StyleApply_Click(object sender, RoutedEventArgs e)
+    {
+        if (StylesList.SelectedItem is EpubStyle style)
+            await ExecuteEditorScriptAsync($"applyStyle({JsonSerializer.Serialize(style.ClassName)}, {(style.IsCharacterStyle ? "true" : "false")});");
+    }
+
+    private async void GenerateToc_Click(object sender, RoutedEventArgs e)
+    {
+        await CaptureEditorContentAsync();
+        try
+        {
+            _viewModel.GenerateTableOfContents();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "TOC generation failed");
+        }
+    }
+
+    private void TocMoveUp_Click(object sender, RoutedEventArgs e) => MoveSelectedTocEntry(-1);
+    private void TocMoveDown_Click(object sender, RoutedEventArgs e) => MoveSelectedTocEntry(1);
+    private void TocIndent_Click(object sender, RoutedEventArgs e) => ChangeSelectedTocIndent(1);
+    private void TocOutdent_Click(object sender, RoutedEventArgs e) => ChangeSelectedTocIndent(-1);
+
+    private void MoveSelectedTocEntry(int offset)
+    {
+        if (TocList.SelectedItem is not EpubTocEntry entry) return;
+        _viewModel.MoveTocEntry(entry, offset);
+        TocList.SelectedItem = entry;
+    }
+
+    private void ChangeSelectedTocIndent(int offset)
+    {
+        if (TocList.SelectedItem is EpubTocEntry entry) _viewModel.ChangeTocIndent(entry, offset);
+    }
+
+    private void TocRename_Click(object sender, RoutedEventArgs e)
+    {
+        if (TocList.SelectedItem is not EpubTocEntry entry) return;
+        var title = Microsoft.VisualBasic.Interaction.InputBox(Strings.Get("Toc.RenamePrompt"),
+            Strings.Get("Toc.Rename"), entry.Title);
+        if (!string.IsNullOrWhiteSpace(title)) _viewModel.RenameTocEntry(entry, title);
+    }
+
+    private async void TocList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TocList.SelectedItem is not EpubTocEntry entry) return;
+        var section = _viewModel.Sections.FirstOrDefault(item => item.Id == entry.SectionId);
+        if (section is null) return;
+        var fragment = entry.Href.Split('#').Skip(1).FirstOrDefault();
+        _pendingTocSectionId = section.Id;
+        _pendingTocFragment = fragment;
+        var alreadyCurrent = ReferenceEquals(section, _viewModel.CurrentSection);
+        _viewModel.OpenSection(section);
+        if (alreadyCurrent)
+            await LoadCurrentSectionAsync();
+    }
+
+    private async void SplitSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.CurrentSection is null) return;
+        if (_sourceMode)
+        {
+            MessageBox.Show(this, Strings.Get("Tools.SplitRequiresEditor"), Strings.Get("Book.SplitSection"),
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var result = await EditorWebView.ExecuteScriptAsync("splitAtCaret();");
+        if (string.IsNullOrWhiteSpace(result) || result == "null") return;
+        try
+        {
+            using var json = JsonDocument.Parse(result);
+            var before = json.RootElement.GetProperty("before").GetString() ?? string.Empty;
+            var after = json.RootElement.GetProperty("after").GetString() ?? string.Empty;
+            var newSection = await _viewModel.SplitSectionAsync(_viewModel.CurrentSection, before, after);
+            _viewModel.OpenSection(newSection);
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Split section failed");
+        }
+    }
+
+    private async void MergeSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.CurrentSection is null) return;
+        await CaptureEditorContentAsync();
+        try
+        {
+            await _viewModel.MergeWithNextSectionAsync(_viewModel.CurrentSection);
+            await LoadCurrentSectionAsync();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Merge section failed");
+        }
+    }
+
+    private void ShowFeatureError(Exception exception, string context)
+    {
+        AppLogger.Write(exception, context);
+        _viewModel.StatusMessage = Strings.Format("Tools.FeatureError", exception.Message);
+        MessageBox.Show(this, _viewModel.StatusMessage, Strings.Get("Tools.ErrorTitle"),
+            MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void RecentFilesMenu_SubmenuOpened(object sender, RoutedEventArgs e)
@@ -557,11 +866,28 @@ public partial class MainWindow : Window
 
     private async void Find_Click(object sender, RoutedEventArgs e)
     {
-        var term = Microsoft.VisualBasic.Interaction.InputBox(Strings.Get("Dialog.FindText"), Strings.Get("Dialog.FindTitle"));
-        if (!string.IsNullOrWhiteSpace(term))
+        var options = FeatureDialogs.EditFindOptions(this, SearchTextBox.Text);
+        if (options is null) return;
+        try
         {
-            await ExecuteEditorScriptAsync($"findText({JsonSerializer.Serialize(term)});");
+            await CaptureEditorContentAsync();
+            var results = _viewModel.SearchText(options);
+            _viewModel.StatusMessage = Strings.Format("Tools.SearchCount", results.Count);
         }
+        catch (Exception exception) { ShowFeatureError(exception, "Find failed"); }
+    }
+
+    private async void SearchResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox { SelectedItem: EpubSearchResult result }) return;
+        var section = _viewModel.Sections.FirstOrDefault(item => item.Id == result.SectionId);
+        if (section is null) return;
+        _pendingTocSectionId = section.Id;
+        _pendingFindText = result.Match;
+        var alreadyCurrent = ReferenceEquals(section, _viewModel.CurrentSection);
+        _viewModel.OpenSection(section);
+        if (alreadyCurrent)
+            await LoadCurrentSectionAsync();
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e)
@@ -589,10 +915,22 @@ public partial class MainWindow : Window
 
     private async void Replace_Click(object sender, RoutedEventArgs e)
     {
-        var oldText = Microsoft.VisualBasic.Interaction.InputBox(Strings.Get("Dialog.FindReplaceText"), Strings.Get("Dialog.FindReplaceTitle"));
-        if (string.IsNullOrEmpty(oldText)) return;
-        var newText = Microsoft.VisualBasic.Interaction.InputBox(Strings.Get("Dialog.ReplaceText"), Strings.Get("Dialog.FindReplaceTitle"));
-        await ExecuteEditorScriptAsync($"replaceText({JsonSerializer.Serialize(oldText)}, {JsonSerializer.Serialize(newText)});");
+        var options = FeatureDialogs.EditReplaceOptions(this, SearchTextBox.Text, wholeBook: true);
+        if (options is null) return;
+        if (options.WholeBook &&
+            MessageBox.Show(this, Strings.Get("Tools.ReplaceAllConfirm"), Strings.Get("Tools.Replace"),
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        await CaptureEditorContentAsync();
+        try
+        {
+            var count = _viewModel.ReplaceText(options);
+            _viewModel.StatusMessage = Strings.Format("Tools.ReplaceCount", count);
+            if (_viewModel.CurrentSection is not null) await LoadCurrentSectionAsync();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Find and replace failed");
+        }
     }
 
     private async Task ExecuteEditorScriptAsync(string script)
@@ -614,6 +952,7 @@ public partial class MainWindow : Window
 
     private async Task CaptureEditorContentAsync()
     {
+        if (_sourceMode) return;
         if (!_webViewReady || _loadedSectionId is null)
         {
             return;
@@ -637,12 +976,38 @@ public partial class MainWindow : Window
 
     private async Task SaveDocumentAsync()
     {
+        if (_sourceMode)
+        {
+            try
+            {
+                ValidateSourceXhtml(SourceEditor.Text);
+            }
+            catch (XmlException exception)
+            {
+                MessageBox.Show(this, Strings.Format("Tools.SourceXmlError", exception.Message),
+                    Strings.Get("Tools.SourceTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+        }
         await CaptureEditorContentAsync();
         await _viewModel.SaveCurrentCommand.ExecuteAsync(null);
     }
 
     private async Task SaveDocumentAsAsync()
     {
+        if (_sourceMode)
+        {
+            try
+            {
+                ValidateSourceXhtml(SourceEditor.Text);
+            }
+            catch (XmlException exception)
+            {
+                MessageBox.Show(this, Strings.Format("Tools.SourceXmlError", exception.Message),
+                    Strings.Get("Tools.SourceTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+        }
         await CaptureEditorContentAsync();
         await _viewModel.SaveAsCommand.ExecuteAsync(null);
     }
@@ -668,6 +1033,16 @@ public partial class MainWindow : Window
         {
             e.Handled = true;
             await SaveDocumentAsync();
+        }
+        else if (e.Key == Key.F)
+        {
+            e.Handled = true;
+            Find_Click(this, new RoutedEventArgs());
+        }
+        else if (e.Key == Key.H)
+        {
+            e.Handled = true;
+            Replace_Click(this, new RoutedEventArgs());
         }
         else if (e.Key == Key.B)
         {

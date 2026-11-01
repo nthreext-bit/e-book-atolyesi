@@ -40,9 +40,20 @@ dotnet publish desktop/EpubStudio.csproj --configuration Release --runtime win-x
 
 ## Yol Haritası
 
-Aşama 2: kitap çapında stiller, metadata, içindekiler paneli, denetçi, kaynak görünümü, regex bul/değiştir, bölüm bölme/birleştirme.
+## Aşama 2
 
-Aşama 3: EPUB denetimi, içe/dışa aktarma, okuyucu önizlemesi, otomatik kurtarma, performans ve cilalama.
+- Kitap genelinde paragraf/karakter stilleri, XHTML kaynak düzenleme (AvalonEdit ile XML vurgulama) ve seçili öğe denetçisi.
+- EPUB 2/3 uyumlu kitap üst verileri ile yazar rolleri ve seri bilgisi.
+- Başlıklardan navigasyon/TOC üretme, bölüm ağacı ve kapak işaretleme.
+- Büyük/küçük harf, tam kelime ve regex seçenekli bölüm veya kitap genelinde bul/değiştir.
+- İmleçten bölüm bölme, bölümleri birleştirme ve kullanılmayan paket dosyalarını bulma.
+- Yapıştırırken biçimi koruma, temizleme veya yalnızca metin olarak ekleme seçenekleri.
+
+Kaynak görünümü için [AvalonEdit](https://github.com/icsharpcode/AvalonEdit) kullanılır (MIT lisansı); NuGet bağımlılığı proje tarafından geri yüklenir.
+
+## Aşama 3
+
+EPUB denetimi, içe/dışa aktarma, okuyucu önizlemesi, otomatik kurtarma, performans ve cilalama.
 
 ## Testler
 

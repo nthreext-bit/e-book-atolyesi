@@ -19,6 +19,9 @@ public static class EditorDocument
             img { max-width: 100%; height: auto; }
             table { border-collapse: collapse; max-width: 100%; }
             td, th { border: 1px solid #8a929d; padding: 5px 8px; }
+            .invisible-space::after { content: '·'; color: #8e98a4; }
+            .invisible-tab::after { content: '→'; color: #8e98a4; }
+            .invisible-newline::after { content: '↵'; color: #8e98a4; }
             html[data-theme='dark'] { color-scheme: dark; color: #e5e9ed; background: #171b1f; }
             html[data-theme='dark'] body { background: #171b1f; }
             html[data-theme='dark'] #page { color: #e5e9ed; background: #252b31; box-shadow: 0 2px 18px #0008; }
@@ -36,6 +39,7 @@ public static class EditorDocument
               if (node.nodeType === Node.TEXT_NODE) return escapeXml(node.nodeValue || '');
               if (node.nodeType === Node.COMMENT_NODE) return '<!--' + (node.nodeValue || '').replace(/--/g, '- -') + '-->';
               if (node.nodeType !== Node.ELEMENT_NODE) return '';
+              if (node.dataset.invisibleChar) return escapeXml(node.dataset.invisibleChar);
               const tag = node.localName.toLowerCase();
               const namespaceUris = { epub: 'http://www.idpf.org/2007/ops', xlink: 'http://www.w3.org/1999/xlink' };
               const namespaceAttrs = Object.entries(namespaceUris)
@@ -48,6 +52,7 @@ public static class EditorDocument
             function serializeContent() { return Array.from(page.childNodes).map(serialize).join(''); }
             let currentSectionId = null;
             let inputTimer;
+            let inspectorTimer;
             function flushContent() {
               clearTimeout(inputTimer);
               if (currentSectionId) chrome.webview.postMessage(JSON.stringify({ type: 'content', sectionId: currentSectionId, content: serializeContent() }));
@@ -56,6 +61,8 @@ public static class EditorDocument
               currentSectionId = sectionId;
               page.innerHTML = markup;
               page.scrollTop = 0;
+              if (invisibleCharacters) setInvisibleCharacters(true);
+              sendInspector();
             }
             function setBasePath(path) { document.getElementById('contentBase').href = path; }
             function setTheme(dark) { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }
@@ -70,8 +77,89 @@ public static class EditorDocument
               }
             }
             function formatText(command, value) { page.focus(); document.execCommand(command, false, value || null); }
-            function pasteText(text) { page.focus(); document.execCommand('insertText', false, text); }
+            function pasteText(text, mode, isHtml) {
+              page.focus();
+              if (!isHtml || mode === 'plain') {
+                if (isHtml) {
+                  const source = document.createElement('div');
+                  source.innerHTML = text;
+                  source.querySelectorAll('script,style,meta,link,base,iframe,object,embed,form').forEach(element => element.remove());
+                  text = source.textContent || '';
+                }
+                const plain = document.createElement('div');
+                plain.textContent = text;
+                document.execCommand('insertHTML', false, plain.innerHTML.replace(/\r\n|\n|\r/g, '<br />'));
+                return;
+              }
+              const holder = document.createElement('div');
+              holder.innerHTML = text;
+              holder.querySelectorAll('script,style,meta,link,base,iframe,object,embed,form').forEach(element => element.remove());
+              holder.querySelectorAll('*').forEach(element => {
+                for (const attr of Array.from(element.attributes)) {
+                  const name = attr.name.toLowerCase();
+                  const value = attr.value.trim().replace(/[\u0000-\u0020]+/g, '').toLowerCase();
+                  if (name.startsWith('on') || name === 'srcdoc' ||
+                      ((name === 'href' || name === 'xlink:href' || name === 'src') && /^(javascript|vbscript|data):/.test(value)) ||
+                      (mode !== 'preserve' && !['href', 'src', 'colspan', 'rowspan'].includes(name))) {
+                    element.removeAttribute(attr.name);
+                  }
+                }
+              });
+              document.execCommand('insertHTML', false, holder.innerHTML.replace(/\u00a0/g, ' '));
+            }
             function setBlock(tag) { page.focus(); document.execCommand('formatBlock', false, tag); }
+            function applyStyle(className, isCharacter) {
+              page.focus();
+              const selection = window.getSelection();
+              if (!selection || selection.rangeCount === 0) return;
+              if (isCharacter) {
+                if (selection.isCollapsed) return;
+                const span = document.createElement('span');
+                span.className = className;
+                try { selection.getRangeAt(0).surroundContents(span); }
+                catch (_) { span.appendChild(selection.getRangeAt(0).extractContents()); selection.getRangeAt(0).insertNode(span); }
+              } else {
+                let element = selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+                  ? selection.anchorNode : selection.anchorNode?.parentElement;
+                element = element?.closest('p,h1,h2,h3,h4,h5,h6,blockquote,li') || page;
+                if (element === page) { document.execCommand('formatBlock', false, 'p'); element = selection.anchorNode?.parentElement?.closest('p') || page; }
+                if (element !== page) element.classList.add(className);
+              }
+              page.dispatchEvent(new Event('input', { bubbles: true }));
+              sendInspector();
+            }
+            function getSelectedElement() {
+              const selection = window.getSelection();
+              const node = selection?.anchorNode;
+              return (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)?.closest('#page *') || page;
+            }
+            function sendInspector() {
+              clearTimeout(inspectorTimer);
+              inspectorTimer = setTimeout(() => {
+                const element = getSelectedElement();
+                if (currentSectionId) chrome.webview.postMessage(JSON.stringify({
+                  type: 'inspector', tag: element.localName, className: element.getAttribute('class') || '',
+                  id: element.getAttribute('id') || '', style: element.getAttribute('style') || ''
+                }));
+              }, 80);
+            }
+            function applyInspector(tag, className, id, style) {
+              let element = getSelectedElement();
+              const allowed = new Set(['p','h1','h2','h3','h4','h5','h6','blockquote','div','span','strong','em','a','li']);
+              if (allowed.has(tag) && element !== page && element.localName !== tag) {
+                const replacement = document.createElement(tag);
+                while (element.firstChild) replacement.appendChild(element.firstChild);
+                for (const attribute of Array.from(element.attributes)) replacement.setAttribute(attribute.name, attribute.value);
+                element.replaceWith(replacement);
+                element = replacement;
+              }
+              if (element === page) return;
+              className ? element.setAttribute('class', className) : element.removeAttribute('class');
+              id ? element.setAttribute('id', id) : element.removeAttribute('id');
+              style ? element.setAttribute('style', style) : element.removeAttribute('style');
+              page.dispatchEvent(new Event('input', { bubbles: true }));
+              sendInspector();
+            }
             function insertLink() {
               const value = prompt(__LINK_PROMPT__);
               if (!value) return;
@@ -91,10 +179,65 @@ public static class EditorDocument
               }
               page.dispatchEvent(new Event('input', { bubbles: true }));
             }
+            let invisibleCharacters = false;
+            function setInvisibleCharacters(enabled) {
+              if (enabled === invisibleCharacters) return;
+              invisibleCharacters = enabled;
+              if (!enabled) {
+                page.querySelectorAll('span[data-invisible-char]').forEach(span => span.replaceWith(document.createTextNode(span.dataset.invisibleChar)));
+                return;
+              }
+              const walker = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+              const textNodes = [];
+              while (walker.nextNode()) textNodes.push(walker.currentNode);
+              for (const textNode of textNodes) {
+                const fragment = document.createDocumentFragment();
+                for (const character of textNode.nodeValue || '') {
+                  if (character === ' ' || character === '\t' || character === '\n') {
+                    const marker = document.createElement('span');
+                    marker.dataset.invisibleChar = character;
+                    marker.className = character === ' ' ? 'invisible-space' : character === '\t' ? 'invisible-tab' : 'invisible-newline';
+                    marker.textContent = character;
+                    fragment.appendChild(marker);
+                  } else {
+                    fragment.appendChild(document.createTextNode(character));
+                  }
+                }
+                textNode.replaceWith(fragment);
+              }
+            }
+            function insertBookmark(id) {
+              const safeId = id.replace(/[^A-Za-z0-9_-]/g, '-');
+              if (safeId) formatText('insertHTML', '<span id="' + safeId + '"></span>');
+            }
+            function insertInternalLink(id) {
+              const safeId = id.replace(/[^A-Za-z0-9_-]/g, '-');
+              if (safeId) formatText('createLink', '#' + safeId);
+            }
+            function insertPageBreak() {
+              formatText('insertHTML', '<div style="page-break-before: always; break-before: page;"></div><p></p>');
+            }
+            function insertFootnote() {
+              formatText('insertHTML', '<aside xmlns:epub="http://www.idpf.org/2007/ops" epub:type="footnote" id="footnote-' + Date.now() + '"><p></p></aside>');
+            }
+            function navigateToFragment(fragment) {
+              const target = document.getElementById(fragment);
+              if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            }
+            function splitAtCaret() {
+              const selection = window.getSelection();
+              if (!selection || selection.rangeCount === 0 || !page.contains(selection.anchorNode)) return null;
+              const range = selection.getRangeAt(0).cloneRange();
+              range.setEnd(page, page.childNodes.length);
+              const tail = range.extractContents();
+              page.dispatchEvent(new Event('input', { bubbles: true }));
+              return { before: serializeContent(), after: Array.from(tail.childNodes).map(serialize).join('') };
+            }
             page.addEventListener('input', () => {
               clearTimeout(inputTimer);
               inputTimer = setTimeout(flushContent, 120);
             });
+            document.addEventListener('selectionchange', sendInspector);
             page.addEventListener('paste', event => {
               event.preventDefault();
               const text = event.clipboardData?.getData('text/plain') || '';

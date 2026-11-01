@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Xml.Linq;
 using KitaplikEditoru.Core;
 using Xunit;
 
@@ -200,6 +201,192 @@ public sealed class EpubPackageServiceTests
     }
 
     [Fact]
+    public async Task StyleChangesPreserveUnknownCssAndAddStylesheetLinks()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0", includeSecondSection: true);
+        var outputPath = Path.Combine(Path.GetTempPath(), $"styled-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.OpenAsync(fixturePath);
+            var style = new EpubStyle { Name = "Alıntı", ClassName = "alinti" };
+            style.Properties["font-style"] = "italic";
+            style.Properties["margin-top"] = "1em";
+            service.SaveStyle(book, style);
+
+            var css = await File.ReadAllTextAsync(book.Resources.Single(resource => resource.MediaType == "text/css").FullPath);
+            Assert.Contains("body { font-family: serif; }", css);
+            Assert.Contains("font-style: italic", css);
+            Assert.Contains(".alinti", css);
+            Assert.Contains(service.ReadStyles(book), item => item.ClassName == "alinti");
+            foreach (var section in book.Sections)
+            {
+                var xhtml = await File.ReadAllTextAsync(section.FilePath);
+                Assert.Contains("book.css", xhtml);
+            }
+            await service.SaveAsync(book, outputPath);
+            using var reopened = await service.OpenAsync(outputPath);
+            await service.LoadSectionAsync(reopened.Sections[1]);
+            Assert.Contains("Second section", reopened.Sections[1].ContentXhtml);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(outputPath);
+        }
+    }
+
+    [Fact]
+    public async Task MetadataChangesPreserveUnknownOpfElementsAndSupportCreatorRoles()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0");
+        var outputPath = Path.Combine(Path.GetTempPath(), $"metadata-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using (var book = await service.OpenAsync(fixturePath))
+            {
+                var metadata = service.ReadMetadata(book);
+                metadata.Title = "Yeni başlık";
+                metadata.Creators = "aut|Ayşe Yazar\ntrl|Mehmet Çevirmen";
+                metadata.Series = "Örnek Seri";
+                metadata.SeriesIndex = "2";
+                service.SaveMetadata(book, metadata);
+                await service.SaveAsync(book, outputPath);
+            }
+
+            using var reopened = await service.OpenAsync(outputPath);
+            var savedMetadata = service.ReadMetadata(reopened);
+            Assert.Equal("Yeni başlık", savedMetadata.Title);
+            Assert.Contains("aut|Ayşe Yazar", savedMetadata.Creators);
+            Assert.Contains("trl|Mehmet Çevirmen", savedMetadata.Creators);
+            Assert.Equal("Örnek Seri", savedMetadata.Series);
+            Assert.Equal("2", savedMetadata.SeriesIndex);
+            using var archive = ZipFile.OpenRead(outputPath);
+            var opf = Encoding.UTF8.GetString(await ReadEntryAsync(archive, "OEBPS/content.opf"));
+            Assert.Contains("urn:vendor:metadata", opf);
+            Assert.Contains("keep-me", opf);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(outputPath);
+        }
+    }
+
+    [Theory]
+    [InlineData("2.0")]
+    [InlineData("3.0")]
+    public async Task CoverImageUpdatesTheVersionSpecificCoverMetadata(string version)
+    {
+        var fixturePath = await CreateFixtureAsync(version);
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.OpenAsync(fixturePath);
+            var image = book.Resources.Single(resource => resource.MediaType == "image/png");
+            service.SetCoverImage(book, image);
+
+            var package = XDocument.Load(Path.Combine(book.WorkingDirectory, book.PackageRelativePath));
+            if (version == "2.0")
+            {
+                Assert.Contains(package.Descendants().Where(element => element.Name.LocalName == "meta"),
+                    element => (string?)element.Attribute("name") == "cover" &&
+                               (string?)element.Attribute("content") == image.Id);
+            }
+            else
+            {
+                var item = package.Descendants().Single(element => (string?)element.Attribute("id") == image.Id);
+                Assert.Contains("cover-image", ((string?)item.Attribute("properties"))?.Split(' ') ?? []);
+            }
+            Assert.True(book.Resources.Single(resource => resource.Id == image.Id).IsCover);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
+    public async Task GeneratedTocUpdatesBothNavigationFormats()
+    {
+        var outputPath = Path.Combine(Path.GetTempPath(), $"generated-toc-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using (var book = await service.CreateNewAsync())
+            {
+                book.Sections[0].ContentXhtml = "<h1>Başlangıç</h1><h2>İlk konu</h2>";
+                book.Sections[0].IsLoaded = true;
+                book.Sections[0].IsDirty = true;
+                var entries = service.GenerateTableOfContents(book);
+                Assert.Equal(2, entries.Count);
+                Assert.Equal(2, entries[1].Level);
+                entries[1].Title = "Düzenlenmiş konu";
+                service.SaveTableOfContents(book);
+                await service.SaveAsync(book, outputPath);
+            }
+
+            using var archive = ZipFile.OpenRead(outputPath);
+            var nav = Encoding.UTF8.GetString(await ReadEntryAsync(archive, "OEBPS/nav.xhtml"));
+            var ncx = Encoding.UTF8.GetString(await ReadEntryAsync(archive, "OEBPS/toc.ncx"));
+            Assert.Contains("Düzenlenmiş konu", nav);
+            Assert.Contains("Düzenlenmiş konu", ncx);
+        }
+        finally
+        {
+            File.Delete(outputPath);
+        }
+    }
+
+    [Fact]
+    public async Task FindReplaceTouchesTextNodesOnlyAndSplitMergeKeepsSpineConsistent()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0", includeSecondSection: true);
+        var outputPath = Path.Combine(Path.GetTempPath(), $"split-merge-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using (var book = await service.OpenAsync(fixturePath))
+            {
+                var replacements = service.ReplaceText(book, "Original", "Revised", true, false, false);
+                Assert.Equal(1, replacements);
+                var first = book.Sections[0];
+                await service.LoadSectionAsync(book.Sections[1]);
+                var split = service.SplitSection(book, first,
+                    "<h1>Part One</h1><p>First half</p>", "<h1>Part Two</h1><p>Second half</p>");
+                Assert.Equal(3, book.Sections.Count);
+                service.MergeSections(book, first, split);
+                Assert.Equal(2, book.Sections.Count);
+                Assert.Contains("First half", first.ContentXhtml);
+                Assert.Contains("Second half", first.ContentXhtml);
+                await service.SaveAsync(book, outputPath);
+            }
+
+            using var reopened = await service.OpenAsync(outputPath);
+            Assert.Equal(2, reopened.Sections.Count);
+            await service.LoadSectionAsync(reopened.Sections[0]);
+            Assert.Contains("First half", reopened.Sections[0].ContentXhtml);
+            Assert.Contains("Second half", reopened.Sections[0].ContentXhtml);
+            using var archive = ZipFile.OpenRead(outputPath);
+            var package = XDocument.Load(archive.GetEntry("OEBPS/content.opf")!.Open());
+            var spineIds = package.Descendants().Where(element => element.Name.LocalName == "itemref")
+                .Select(element => (string?)element.Attribute("idref")).ToArray();
+            Assert.Equal(reopened.Sections.Select(section => section.Id), spineIds);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(outputPath);
+        }
+    }
+
+    [Fact]
     public async Task AddImageCopiesAssetAndAddsManifestEntry()
     {
         var fixturePath = await CreateFixtureAsync("3.0");
@@ -222,7 +409,8 @@ public sealed class EpubPackageServiceTests
             }
 
             using var reopened = await service.OpenAsync(outputPath);
-            var addedImage = Assert.Single(reopened.Resources.Where(resource => resource.MediaType == "image/png" && resource.Href.Contains("image-", StringComparison.Ordinal)));
+            var addedImage = Assert.Single(reopened.Resources, resource =>
+                resource.MediaType == "image/png" && resource.Href.Contains("image-", StringComparison.Ordinal));
             Assert.True(File.Exists(addedImage.FullPath));
             await service.LoadSectionAsync(reopened.Sections[0]);
             Assert.Contains(addedImage.Href.Split('/').Last(), reopened.Sections[0].ContentXhtml);

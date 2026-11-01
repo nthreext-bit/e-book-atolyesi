@@ -180,4 +180,85 @@
   <data name="Format.IndentTooltip" xml:space="preserve"><value>Increase indent</value></data>
   <data name="Format.OutdentTooltip" xml:space="preserve"><value>Decrease indent</value></data>
   <data name="Editor.StartTyping" xml:space="preserve"><value>Start typing...</value></data>
+  <data name="Tab.Toc" xml:space="preserve"><value>Table of contents</value></data>
+  <data name="Tab.Results" xml:space="preserve"><value>Search results</value></data>
+  <data name="Editor.Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Editor.Wysiwyg" xml:space="preserve"><value>Visual editor</value></data>
+  <data name="Tools.ParagraphType" xml:space="preserve"><value>Paragraph type</value></data>
+  <data name="Tools.Bookmark" xml:space="preserve"><value>Bookmark</value></data>
+  <data name="Tools.BookmarkPrompt" xml:space="preserve"><value>Bookmark ID:</value></data>
+  <data name="Tools.InternalLink" xml:space="preserve"><value>Book link</value></data>
+  <data name="Tools.InternalLinkPrompt" xml:space="preserve"><value>Target bookmark ID:</value></data>
+  <data name="Tools.PageBreak" xml:space="preserve"><value>Page break</value></data>
+  <data name="Tools.Footnote" xml:space="preserve"><value>Footnote</value></data>
+  <data name="Tools.SourceTitle" xml:space="preserve"><value>XHTML source</value></data>
+  <data name="Tools.SourceXmlError" xml:space="preserve"><value>XHTML is not well-formed XML. Error: {0}</value></data>
+  <data name="Tools.ReplaceAllConfirm" xml:space="preserve"><value>Matching text in the entire book will be replaced. Continue?</value></data>
+  <data name="Tools.ReplaceCount" xml:space="preserve"><value>{0} matches replaced.</value></data>
+  <data name="Tools.SearchCount" xml:space="preserve"><value>{0} search results found.</value></data>
+  <data name="Book.Metadata" xml:space="preserve"><value>Book metadata...</value></data>
+  <data name="Book.GenerateToc" xml:space="preserve"><value>Generate TOC from headings</value></data>
+  <data name="Book.SplitSection" xml:space="preserve"><value>Split at caret...</value></data>
+  <data name="Book.MergeSection" xml:space="preserve"><value>Merge with next section</value></data>
+  <data name="Toc.MoveUp" xml:space="preserve"><value>Move up</value></data>
+  <data name="Toc.MoveDown" xml:space="preserve"><value>Move down</value></data>
+  <data name="Toc.Indent" xml:space="preserve"><value>Increase indent</value></data>
+  <data name="Toc.Outdent" xml:space="preserve"><value>Decrease indent</value></data>
+  <data name="Toc.Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Toc.RenamePrompt" xml:space="preserve"><value>Label shown in the table of contents:</value></data>
+  <data name="Styles.New" xml:space="preserve"><value>New</value></data>
+  <data name="Styles.Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Styles.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Styles.Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Styles.DeletePrompt" xml:space="preserve"><value>Delete style '{0}'?</value></data>
+  <data name="Inspector.Tag" xml:space="preserve"><value>Tag</value></data>
+  <data name="Inspector.Apply" xml:space="preserve"><value>Apply to element</value></data>
+  <data name="Tools.SplitRequiresEditor" xml:space="preserve"><value>Split a section at the caret from the WYSIWYG editor.</value></data>
+  <data name="Tools.FeatureError" xml:space="preserve"><value>The operation failed: {0}</value></data>
+  <data name="Tools.ErrorTitle" xml:space="preserve"><value>Operation error</value></data>
+  <data name="Book.SetCover" xml:space="preserve"><value>Set cover image...</value></data>
+  <data name="Dialog.CoverImage" xml:space="preserve"><value>Select a cover image</value></data>
+  <data name="Tools.UnusedScanError" xml:space="preserve"><value>Unused files could not be checked: {0}</value></data>
+  <data name="Dialog.Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="Dialog.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Metadata.Title" xml:space="preserve"><value>Book metadata</value></data>
+  <data name="Metadata.TitleField" xml:space="preserve"><value>Title</value></data>
+  <data name="Metadata.CreatorsField" xml:space="preserve"><value>Creators and roles (one per line: aut|Full Name)</value></data>
+  <data name="Metadata.PublisherField" xml:space="preserve"><value>Publisher</value></data>
+  <data name="Metadata.LanguageField" xml:space="preserve"><value>Language</value></data>
+  <data name="Metadata.DescriptionField" xml:space="preserve"><value>Description</value></data>
+  <data name="Metadata.IdentifierField" xml:space="preserve"><value>Identifier / ISBN</value></data>
+  <data name="Metadata.DateField" xml:space="preserve"><value>Date</value></data>
+  <data name="Metadata.SubjectsField" xml:space="preserve"><value>Subjects (separate with semicolons)</value></data>
+  <data name="Metadata.RightsField" xml:space="preserve"><value>Rights</value></data>
+  <data name="Metadata.SeriesField" xml:space="preserve"><value>Series name</value></data>
+  <data name="Metadata.SeriesIndexField" xml:space="preserve"><value>Series index</value></data>
+  <data name="Styles.NewTitle" xml:space="preserve"><value>New style</value></data>
+  <data name="Styles.EditTitle" xml:space="preserve"><value>Edit style</value></data>
+  <data name="Styles.CharacterStyle" xml:space="preserve"><value>Character style (apply to selection)</value></data>
+  <data name="Styles.Name" xml:space="preserve"><value>Display name</value></data>
+  <data name="Styles.Class" xml:space="preserve"><value>CSS class (e.g. quote)</value></data>
+  <data name="Styles.FontFamily" xml:space="preserve"><value>Font family</value></data>
+  <data name="Styles.FontSize" xml:space="preserve"><value>Size (e.g. 1.1em)</value></data>
+  <data name="Styles.Color" xml:space="preserve"><value>Color (e.g. #333333)</value></data>
+  <data name="Styles.FontWeight" xml:space="preserve"><value>Weight (normal/bold)</value></data>
+  <data name="Styles.FontStyle" xml:space="preserve"><value>Italic (normal/italic)</value></data>
+  <data name="Styles.Alignment" xml:space="preserve"><value>Alignment</value></data>
+  <data name="Styles.TextIndent" xml:space="preserve"><value>First-line indent</value></data>
+  <data name="Styles.LineHeight" xml:space="preserve"><value>Line height</value></data>
+  <data name="Styles.MarginTop" xml:space="preserve"><value>Space before paragraph</value></data>
+  <data name="Styles.MarginBottom" xml:space="preserve"><value>Space after paragraph</value></data>
+  <data name="Find.Title" xml:space="preserve"><value>Find in book</value></data>
+  <data name="Find.Search" xml:space="preserve"><value>Find</value></data>
+  <data name="Find.MatchCase" xml:space="preserve"><value>Match case</value></data>
+  <data name="Find.WholeWord" xml:space="preserve"><value>Whole word</value></data>
+  <data name="Find.Regex" xml:space="preserve"><value>Regular expression (regex)</value></data>
+  <data name="Find.WholeBook" xml:space="preserve"><value>Search entire book</value></data>
+  <data name="Replace.Title" xml:space="preserve"><value>Find and replace</value></data>
+  <data name="Replace.With" xml:space="preserve"><value>Replace with</value></data>
+  <data name="Replace.WholeBook" xml:space="preserve"><value>Find/replace in entire book</value></data>
+  <data name="Paste.Title" xml:space="preserve"><value>Paste format</value></data>
+  <data name="Paste.Clean" xml:space="preserve"><value>Clean and adapt to book styles</value></data>
+  <data name="Paste.Preserve" xml:space="preserve"><value>Preserve formatting</value></data>
+  <data name="Paste.Plain" xml:space="preserve"><value>Plain text</value></data>
 </root>

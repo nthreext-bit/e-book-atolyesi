@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Xml;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KitaplikEditoru.Core;
+using KitaplikEditoru.Editor;
 using KitaplikEditoru.Infrastructure;
 using KitaplikEditoru.Localization;
 
@@ -32,6 +34,9 @@ public partial class EditorViewModel : ObservableObject, IDisposable
     public ObservableCollection<EpubResource> ImageResources { get; } = [];
     public ObservableCollection<EpubResource> StyleResources { get; } = [];
     public ObservableCollection<EpubResource> OtherResources { get; } = [];
+    public ObservableCollection<EpubStyle> Styles { get; } = [];
+    public ObservableCollection<EpubTocEntry> TableOfContents { get; } = [];
+    public ObservableCollection<EpubSearchResult> SearchResults { get; } = [];
     public ObservableCollection<string> RecentFiles { get; }
 
     [ObservableProperty]
@@ -51,6 +56,9 @@ public partial class EditorViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool darkTheme;
+
+    [ObservableProperty]
+    private EpubMetadata metadata = new();
 
     public bool IsDirty => _book?.IsDirty == true;
     public bool HasBook => _book is not null;
@@ -91,6 +99,7 @@ public partial class EditorViewModel : ObservableObject, IDisposable
             Sections.Add(section);
         }
         SetResources(newBook.Resources);
+        LoadBookMetadata(newBook);
 
         BookTitle = newBook.Title;
         CurrentFilePath = newBook.PackageFile;
@@ -98,6 +107,7 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         OpenSection(Sections.FirstOrDefault());
         StatusMessage = Strings.Format("Status.SectionsLoaded", Sections.Count);
         previousBook?.Dispose();
+        _ = RefreshUnusedResourcesAsync(newBook);
         NotifyDocumentStateChanged();
         OnPropertyChanged(nameof(HasBook));
         OnPropertyChanged(nameof(WorkingDirectory));
@@ -119,11 +129,13 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         OpenSections.Clear();
         foreach (var section in newBook.Sections) Sections.Add(section);
         SetResources(newBook.Resources);
+        LoadBookMetadata(newBook);
         BookTitle = newBook.Title;
         CurrentFilePath = string.Empty;
         OpenSection(Sections.FirstOrDefault());
         StatusMessage = Strings.Get("Status.NewBook");
         previousBook?.Dispose();
+        _ = RefreshUnusedResourcesAsync(newBook);
         OnPropertyChanged(nameof(HasBook));
         OnPropertyChanged(nameof(WorkingDirectory));
         NotifyDocumentStateChanged();
@@ -223,9 +235,13 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         var sectionDirectory = Path.GetDirectoryName(CurrentSection.RelativePath)?.Replace('\\', '/') ?? string.Empty;
         var relativeImagePath = Path.GetRelativePath(sectionDirectory.Length == 0 ? "." : sectionDirectory, packageRelativePath).Replace('\\', '/');
         SetResources(_book.Resources);
+        await RefreshUnusedResourcesAsync(_book);
         NotifyDocumentStateChanged();
         return relativeImagePath;
     }
+
+    public Task RefreshResourceUsageAsync() =>
+        _book is null ? Task.CompletedTask : RefreshUnusedResourcesAsync(_book);
 
     public void UpdateSectionContent(string sectionId, string content)
     {
@@ -293,6 +309,187 @@ public partial class EditorViewModel : ObservableObject, IDisposable
                 OtherResources.Add(resource);
             }
         }
+
+        Styles.Clear();
+        if (_book is not null)
+        {
+            foreach (var style in _packageService.ReadStyles(_book))
+            {
+                Styles.Add(style);
+            }
+        }
+    }
+
+    private async Task RefreshUnusedResourcesAsync(EpubBook book)
+    {
+        try
+        {
+            var unusedIds = await Task.Run(() => _packageService.FindUnusedResourceIds(book));
+            if (!ReferenceEquals(_book, book)) return;
+            for (var index = 0; index < book.Resources.Count; index++)
+            {
+                var resource = book.Resources[index];
+                book.Resources[index] = resource with { IsUnused = unusedIds.Contains(resource.Id) };
+            }
+            SetResources(book.Resources);
+        }
+        catch (Exception exception) when (exception is XmlException or IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            AppLogger.Write(exception, "Unused resource scan failed");
+            if (ReferenceEquals(_book, book))
+                StatusMessage = Strings.Format("Tools.UnusedScanError", exception.Message);
+        }
+    }
+
+    private void LoadBookMetadata(EpubBook book)
+    {
+        Metadata = _packageService.ReadMetadata(book);
+        TableOfContents.Clear();
+    }
+
+    public void SaveMetadata()
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException("Önce bir EPUB açın.");
+        }
+        _packageService.SaveMetadata(_book, Metadata);
+        BookTitle = _book.Title;
+        NotifyDocumentStateChanged();
+    }
+
+    public EpubStyle SaveStyle(EpubStyle style)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException("Önce bir EPUB açın.");
+        }
+        _packageService.SaveStyle(_book, style);
+        SetResources(_book.Resources);
+        _ = RefreshUnusedResourcesAsync(_book);
+        NotifyDocumentStateChanged();
+        return style;
+    }
+
+    public void DeleteStyle(EpubStyle style)
+    {
+        if (_book is null) return;
+        _packageService.DeleteStyle(_book, style);
+        SetResources(_book.Resources);
+        NotifyDocumentStateChanged();
+    }
+
+    public void SetCoverImage(EpubResource resource)
+    {
+        if (_book is null) throw new InvalidOperationException("Önce bir EPUB açın.");
+        var current = _book.Resources.FirstOrDefault(item => item.Id == resource.Id)
+            ?? throw new InvalidOperationException("Kapak resmi EPUB manifest'inde bulunamadı.");
+        _packageService.SetCoverImage(_book, current);
+        SetResources(_book.Resources);
+        NotifyDocumentStateChanged();
+    }
+
+    public void GenerateTableOfContents()
+    {
+        if (_book is null) return;
+        var entries = _packageService.GenerateTableOfContents(_book);
+        TableOfContents.Clear();
+        foreach (var entry in entries) TableOfContents.Add(entry);
+        NotifyDocumentStateChanged();
+    }
+
+    public void MoveTocEntry(EpubTocEntry entry, int offset)
+    {
+        var index = TableOfContents.IndexOf(entry);
+        var target = index + offset;
+        if (_book is null || index < 0 || target < 0 || target >= TableOfContents.Count) return;
+        TableOfContents.Move(index, target);
+        _book.TableOfContents.Clear();
+        _book.TableOfContents.AddRange(TableOfContents);
+        _packageService.SaveTableOfContents(_book);
+        NotifyDocumentStateChanged();
+    }
+
+    public void RenameTocEntry(EpubTocEntry entry, string title)
+    {
+        if (_book is null || string.IsNullOrWhiteSpace(title)) return;
+        entry.Title = title.Trim();
+        _packageService.SaveTableOfContents(_book);
+        NotifyDocumentStateChanged();
+    }
+
+    public void ChangeTocIndent(EpubTocEntry entry, int offset)
+    {
+        if (_book is null) return;
+        entry.Level = Math.Clamp(entry.Level + offset, 1, 6);
+        _packageService.SaveTableOfContents(_book);
+        NotifyDocumentStateChanged();
+    }
+
+    public int ReplaceText(ReplaceOptions options)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException("Önce bir EPUB açın.");
+        }
+        var onlySection = options.WholeBook ? null : CurrentSection;
+        if (onlySection is null && !options.WholeBook)
+        {
+            throw new InvalidOperationException("Açık bölüm bulunamadı.");
+        }
+        var count = _packageService.ReplaceText(_book, options.Search, options.Replacement,
+            options.MatchCase, options.WholeWord, options.RegularExpression, onlySection);
+        OnPropertyChanged(nameof(TotalWordCount));
+        OnPropertyChanged(nameof(TotalWordCountText));
+        OnPropertyChanged(nameof(CurrentWordCount));
+        OnPropertyChanged(nameof(CurrentWordCountText));
+        NotifyDocumentStateChanged();
+        return count;
+    }
+
+    public IReadOnlyList<EpubSearchResult> SearchText(FindOptions options)
+    {
+        if (_book is null) throw new InvalidOperationException("Önce bir EPUB açın.");
+        var onlySection = options.WholeBook ? null : CurrentSection;
+        if (onlySection is null && !options.WholeBook)
+            throw new InvalidOperationException("Açık bölüm bulunamadı.");
+        var results = _packageService.SearchText(_book, options.Search, options.MatchCase,
+            options.WholeWord, options.RegularExpression, onlySection);
+        SearchResults.Clear();
+        foreach (var result in results) SearchResults.Add(result);
+        return results;
+    }
+
+    public async Task<EpubSection> SplitSectionAsync(EpubSection section, string firstContent, string secondContent)
+    {
+        if (_book is null) throw new InvalidOperationException("Önce bir EPUB açın.");
+        await EnsureSectionLoadedAsync(section);
+        var newSection = _packageService.SplitSection(_book, section, firstContent, secondContent);
+        var sectionIndex = Sections.IndexOf(section);
+        Sections.Insert(sectionIndex + 1, newSection);
+        OpenSections.Add(newSection);
+        Resources.Add(_book.Resources.First(resource => resource.Id == newSection.Id));
+        NotifyDocumentStateChanged();
+        return newSection;
+    }
+
+    public async Task MergeWithNextSectionAsync(EpubSection section)
+    {
+        if (_book is null) throw new InvalidOperationException("Önce bir EPUB açın.");
+        var index = Sections.IndexOf(section);
+        if (index < 0 || index + 1 >= Sections.Count)
+            throw new InvalidOperationException("Birleştirilecek sonraki bölüm bulunamadı.");
+        var next = Sections[index + 1];
+        await EnsureSectionLoadedAsync(section);
+        await EnsureSectionLoadedAsync(next);
+        _packageService.MergeSections(_book, section, next);
+        Sections.Remove(next);
+        OpenSections.Remove(next);
+        Resources.Remove(_book.Resources.FirstOrDefault(resource => resource.Id == next.Id)!);
+        if (ReferenceEquals(CurrentSection, next)) CurrentSection = section;
+        TableOfContents.Clear();
+        foreach (var entry in _book.TableOfContents) TableOfContents.Add(entry);
+        NotifyDocumentStateChanged();
     }
 
     private static bool IsNavigationResource(EpubResource resource) => resource.IsNavigation;
