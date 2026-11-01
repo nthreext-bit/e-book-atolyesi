@@ -25,6 +25,8 @@ $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
 $hasSigningPassword = -not [string]::IsNullOrWhiteSpace($certificatePassword)
+$temporaryTrustThumbprint = $null
+$temporaryTrustInstalled = $false
 if ($hasSigningCertificate -ne $hasSigningPassword) {
     throw 'Set both WINDOWS_SIGNING_CERTIFICATE_BASE64 and WINDOWS_SIGNING_PASSWORD to sign the installer.'
 }
@@ -99,6 +101,14 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         $selfSignedThumbprint = $publicCertificate.Thumbprint
         $publicCertificate.Dispose()
         Write-Output "Public signing certificate exported: $selfSignedThumbprint"
+        Write-Output 'Temporarily trusting the signing certificate for signature verification...'
+        $trustedCertificate = Import-Certificate `
+            -FilePath $publicCertificatePath `
+            -CertStoreLocation 'Cert:\CurrentUser\Root' `
+            -Confirm:$false `
+            -ErrorAction Stop
+        $temporaryTrustThumbprint = $trustedCertificate.Thumbprint
+        $temporaryTrustInstalled = $true
     }
     elseif ($hasSigningCertificate) {
         [System.IO.File]::WriteAllBytes(
@@ -120,11 +130,10 @@ function Sign-Executable([string]$Path) {
 
     $signature = Get-AuthenticodeSignature -FilePath $Path
     $isExpectedSelfSigned = $SelfSignedSigning -and
-        $signature.Status -eq [System.Management.Automation.SignatureStatus]::NotTrusted -and
         $signature.SignerCertificate -and
         $signature.SignerCertificate.Thumbprint -eq $selfSignedThumbprint
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -and
-        -not $isExpectedSelfSigned) {
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
+        ($SelfSignedSigning -and -not $isExpectedSelfSigned)) {
         throw "Authenticode signature verification failed for ${Path}: $($signature.Status)."
     }
 }
@@ -198,6 +207,9 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
 Write-Output "Installer created: $installerPath"
 }
 finally {
+    if ($temporaryTrustInstalled) {
+        Remove-Item "Cert:\CurrentUser\Root\$temporaryTrustThumbprint" -Force -ErrorAction Stop
+    }
     foreach ($temporaryFile in @($signingCertificatePath, $signingKeyPath, $signingPemPath)) {
         if (Test-Path $temporaryFile) {
             Remove-Item -LiteralPath $temporaryFile -Force
