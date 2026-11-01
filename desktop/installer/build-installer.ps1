@@ -25,8 +25,6 @@ $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
 $hasSigningPassword = -not [string]::IsNullOrWhiteSpace($certificatePassword)
-$temporaryTrustThumbprint = $null
-$temporaryTrustInstalled = $false
 if ($hasSigningCertificate -ne $hasSigningPassword) {
     throw 'Set both WINDOWS_SIGNING_CERTIFICATE_BASE64 and WINDOWS_SIGNING_PASSWORD to sign the installer.'
 }
@@ -38,6 +36,7 @@ if ($RequireSigning -and -not $hasSigningCertificate -and -not $SelfSignedSignin
 }
 
 $signTool = $null
+$selfSignedThumbprint = $null
 if ($hasSigningCertificate -or $SelfSignedSigning) {
     $signToolCommand = Get-Command 'signtool.exe' -ErrorAction SilentlyContinue
     if ($signToolCommand) {
@@ -79,6 +78,7 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         if ($LASTEXITCODE -ne 0) {
             throw "OpenSSL certificate creation failed with exit code $LASTEXITCODE."
         }
+        Write-Output 'Temporary self-signed certificate created.'
 
         & $openSsl pkcs12 -export `
             -out $signingCertificatePath `
@@ -88,18 +88,17 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         if ($LASTEXITCODE -ne 0) {
             throw "OpenSSL PFX creation failed with exit code $LASTEXITCODE."
         }
+        Write-Output 'Temporary signing key exported to PFX.'
 
         $publicCertificatePath = Join-Path $outputDirectory "EpubAtolyesi-SelfSigned-v$AppVersion.cer"
         & $openSsl x509 -in $signingPemPath -outform DER -out $publicCertificatePath
         if ($LASTEXITCODE -ne 0) {
             throw "OpenSSL public certificate export failed with exit code $LASTEXITCODE."
         }
-        $trustedCertificate = Import-Certificate `
-            -FilePath $publicCertificatePath `
-            -CertStoreLocation 'Cert:\CurrentUser\Root'
-        $temporaryTrustThumbprint = $trustedCertificate.Thumbprint
-        $temporaryTrustInstalled = $true
-        Write-Output "Temporary signing certificate created: $temporaryTrustThumbprint"
+        $publicCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($publicCertificatePath)
+        $selfSignedThumbprint = $publicCertificate.Thumbprint
+        $publicCertificate.Dispose()
+        Write-Output "Public signing certificate exported: $selfSignedThumbprint"
     }
     elseif ($hasSigningCertificate) {
         [System.IO.File]::WriteAllBytes(
@@ -109,23 +108,28 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
 }
 
 function Sign-Executable([string]$Path) {
-    & $signTool sign `
-        /f $signingCertificatePath `
-        /p $certificatePassword `
-        /fd SHA256 `
-        /tr 'http://timestamp.digicert.com' `
-        /td SHA256 `
-        $Path
+    $signArguments = @('sign', '/f', $signingCertificatePath, '/p', $certificatePassword, '/fd', 'SHA256')
+    if (-not $SelfSignedSigning) {
+        $signArguments += @('/tr', 'http://timestamp.digicert.com', '/td', 'SHA256')
+    }
+    $signArguments += $Path
+    & $signTool @signArguments
     if ($LASTEXITCODE -ne 0) {
         throw "Authenticode signing failed for $Path with exit code $LASTEXITCODE."
     }
 
     $signature = Get-AuthenticodeSignature -FilePath $Path
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+    $isExpectedSelfSigned = $SelfSignedSigning -and
+        $signature.Status -eq [System.Management.Automation.SignatureStatus]::NotTrusted -and
+        $signature.SignerCertificate -and
+        $signature.SignerCertificate.Thumbprint -eq $selfSignedThumbprint
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -and
+        -not $isExpectedSelfSigned) {
         throw "Authenticode signature verification failed for ${Path}: $($signature.Status)."
     }
 }
 
+Write-Output 'Publishing the self-contained Windows application...'
 & dotnet publish $projectFile `
     --configuration Release `
     --runtime win-x64 `
@@ -136,14 +140,19 @@ function Sign-Executable([string]$Path) {
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
+Write-Output 'Application publish completed.'
 
 if ($hasSigningCertificate -or $SelfSignedSigning) {
+    Write-Output 'Signing the application executable...'
     Sign-Executable (Join-Path $publishDirectory 'EpubAtolyesi.exe')
 }
 
+Write-Output 'Downloading the Microsoft WebView2 bootstrapper...'
 Invoke-WebRequest `
     -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' `
-    -OutFile $bootstrapperPath
+    -OutFile $bootstrapperPath `
+    -TimeoutSec 120
+Write-Output 'WebView2 bootstrapper download completed.'
 
 $signature = Get-AuthenticodeSignature -FilePath $bootstrapperPath
 if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
@@ -170,6 +179,7 @@ if ([string]::IsNullOrWhiteSpace($InnoSetupCompiler) -or
     throw 'Inno Setup 6 was not found. Install it or pass its ISCC.exe path with -InnoSetupCompiler.'
 }
 
+Write-Output 'Compiling the Windows installer...'
 & $InnoSetupCompiler "/DAppVersion=$AppVersion" (Join-Path $installerDirectory 'EpubAtolyesi.iss')
 if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup compilation failed with exit code $LASTEXITCODE."
@@ -181,18 +191,13 @@ if (-not (Test-Path $installerPath)) {
 }
 
 if ($hasSigningCertificate -or $SelfSignedSigning) {
+    Write-Output 'Signing the installer executable...'
     Sign-Executable $installerPath
 }
 
 Write-Output "Installer created: $installerPath"
 }
 finally {
-    if (Test-Path $signingCertificatePath) {
-        Remove-Item -LiteralPath $signingCertificatePath -Force
-    }
-    if ($temporaryTrustInstalled) {
-        Remove-Item "Cert:\CurrentUser\Root\$temporaryTrustThumbprint" -Force
-    }
     foreach ($temporaryFile in @($signingCertificatePath, $signingKeyPath, $signingPemPath)) {
         if (Test-Path $temporaryFile) {
             Remove-Item -LiteralPath $temporaryFile -Force
