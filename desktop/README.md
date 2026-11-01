@@ -4,9 +4,9 @@ Windows 10/11 için WPF tabanlı EPUB düzenleyicisi. Masaüstü uygulaması, de
 
 ## Gereksinimler
 
-- Kurulum için Windows 10/11 x64. Yükleyici uygulamayı .NET 8 çalışma zamanını ayrıca gerektirmeyen biçimde kurar.
+- Kurulum için Windows 10/11 x64. Uygulama .NET 8 çalışma zamanını kendi içinde taşır; son kullanıcıya .NET ayrıca kurulmaz.
 - WebView2 Runtime yoksa yükleyici, Microsoft'un imzalı WebView2 bootstrapper'ını çalıştırarak Runtime'ı kurar; bunun için internet bağlantısı gerekir.
-- Kaynaktan derleme için .NET 8 SDK, Inno Setup 6 ve Microsoft WebView2 bootstrapper'ını indirmek için internet bağlantısı gerekir.
+- Kaynaktan derleme için .NET 8 SDK, Inno Setup 6 ve self-signed imza seçeneği için Git for Windows/OpenSSL gerekir.
 
 ## Windows Yükleyicisi Oluşturma
 
@@ -20,7 +20,9 @@ Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olara
 
 Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v<version>.exe`. Sürümü `-AppVersion` ile belirtebilirsiniz.
 
-Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. GitHub Actions hem uygulama EXE'sini hem kurulum EXE'sini imzalar ve self-signed sertifikanın açık anahtarını `.cer` olarak ekler. Self-signed imza Windows tarafından varsayılan olarak güvenilir sayılmaz; sertifikayı ayrıca güvenilir olarak yüklemek gerekir ve SmartScreen uyarısı yine görülebilir. CI her derlemede yeni, geçici bir sertifika üretir.
+Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar; eksikse Microsoft bootstrapper'ı kurar. Kurulum dışında çalıştırıldığında WebView2 bulunamazsa uygulama indirme bağlantılı uyarı paneli gösterir. GitHub Actions hem uygulama EXE'sini hem kurulum EXE'sini Authenticode ile imzalar ve self-signed sertifikanın açık anahtarını `.cer` olarak ekler. Self-signed imza Windows tarafından varsayılan olarak güvenilir sayılmaz; sertifikayı ayrıca güvenilir olarak yüklemek gerekir ve SmartScreen uyarısı yine görülebilir. CI her derlemede yeni, geçici bir sertifika üretir.
+
+Proje GNU General Public License v3.0 veya sonraki sürümleri kapsamında dağıtılır; ayrıntılar depo kökündeki [`LICENSE`](../LICENSE) dosyasındadır.
 
 Geliştirme sırasında uygulamayı depo kökünden çalıştırmak için:
 

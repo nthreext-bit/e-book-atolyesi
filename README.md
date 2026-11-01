@@ -22,7 +22,9 @@ assets/              Proje görselleri
 
 ## Masaüstü Uygulaması
 
-Gereksinimler: Windows 10/11, .NET 8 SDK ve Microsoft Edge WebView2 Runtime. Uygulama self-contained yayımlansa da WebView2 Runtime ayrıca gerekir; eksikse indirme bağlantısı gösterilir.
+Windows 10/11 x64 için [kurulumlu Windows paketi](https://github.com/nthreext-bit/e-book-atolyesi/releases/latest) önerilir. Uygulama .NET 8 çalışma zamanını kendi içinde taşır; son kullanıcıya ayrıca .NET kurmak gerekmez. Kurulum, WebView2 Runtime yoksa Microsoft yükleyicisini çalıştırır. Runtime yine de bulunamazsa uygulama ekranda uyarı ve indirme bağlantısı gösterir.
+
+Kaynak koddan derleme ve `dotnet run` için .NET 8 SDK gerekir. Web prototipi için ayrıca Node.js gerekir.
 
 Depo kökünden derleyip çalıştır:
 
@@ -32,13 +34,13 @@ dotnet build desktop/EpubStudio.csproj --configuration Release
 dotnet run --project desktop/EpubStudio.csproj
 ```
 
-Tek dosya, self-contained x64 EXE:
+Self-contained Windows x64 yayın:
 
 ```powershell
-dotnet publish desktop/EpubStudio.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish desktop/EpubStudio.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false
 ```
 
-Çıktı: `desktop/bin/Release/net8.0-windows/win-x64/publish/EpubAtolyesi.exe`.
+Kurulumlu paketin derleme ve imzalama yönergeleri [`desktop/README.md`](desktop/README.md) dosyasında bulunur.
 
 ## Web Prototipi
 
@@ -65,3 +67,7 @@ dotnet test desktop.Tests/EpubStudio.Tests.csproj --configuration Release
 ```
 
 Ayrıntılı masaüstü kurulum ve özellik notları [`desktop/README.md`](desktop/README.md) dosyasında.
+
+## Lisans
+
+EPUB Atölyesi GNU General Public License v3.0 veya sonraki sürümleri kapsamında dağıtılır. Bkz. [`LICENSE`](LICENSE).

@@ -26,6 +26,7 @@ public sealed class ReaderPreviewWindow : Window
         Height = 820;
         MinWidth = 640;
         MinHeight = 480;
+        Icon = Application.Current.MainWindow?.Icon;
         Content = _webView;
         _html = html;
         Loaded += Window_Loaded;

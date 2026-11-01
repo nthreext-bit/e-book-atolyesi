@@ -9,9 +9,13 @@
     <ApplicationTitle>EPUB Atölyesi</ApplicationTitle>
     <AssemblyName>EpubAtolyesi</AssemblyName>
     <RootNamespace>KitaplikEditoru</RootNamespace>
+    <ApplicationIcon>Assets\epub-atolyesi.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\epub-atolyesi.ico" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
