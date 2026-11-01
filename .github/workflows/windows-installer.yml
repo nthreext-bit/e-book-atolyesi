@@ -21,12 +21,15 @@ jobs:
         run: choco install innosetup --yes --no-progress
       - name: Build installer
         shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+          WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
         run: |
-          $version = '0.0.3'
+          $version = '0.0.4'
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
             $version = $env:GITHUB_REF_NAME.TrimStart('v')
           }
-          ./desktop/installer/build-installer.ps1 -AppVersion $version
+          ./desktop/installer/build-installer.ps1 -AppVersion $version -RequireSigning
       - uses: actions/upload-artifact@v4
         with:
           name: EpubAtolyesi-Windows-Installer

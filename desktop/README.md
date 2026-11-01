@@ -16,11 +16,11 @@ Windows'ta depo kökünden çalıştırın:
 .\desktop\installer\build-installer.ps1
 ```
 
-Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olarak hazırlar, Microsoft imzalı WebView2 bootstrapper'ını indirir ve Inno Setup ile kurulum dosyasını oluşturur. Inno Setup 6 otomatik bulunamazsa `-InnoSetupCompiler` ile `ISCC.exe` yolunu belirtebilirsiniz.
+Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olarak hazırlar, Microsoft imzalı WebView2 bootstrapper'ını indirir ve Inno Setup ile kurulum dosyasını oluşturur. İmzalama için geçerli bir Authenticode kod imzalama sertifikasını PFX olarak Base64 kodlayıp `WINDOWS_SIGNING_CERTIFICATE_BASE64` ve `WINDOWS_SIGNING_PASSWORD` ortam değişkenlerine koyun; `-RequireSigning` eksik sertifikada derlemeyi durdurur. Inno Setup 6 otomatik bulunamazsa `-InnoSetupCompiler` ile `ISCC.exe` yolunu belirtebilirsiniz.
 
 Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v<version>.exe`. Sürümü `-AppVersion` ile belirtebilirsiniz.
 
-Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. Aynı yükleyici GitHub Actions'ta elle çalıştırılabilir veya `v*` etiketi gönderildiğinde oluşturulup indirilebilir bir iş artefaktı olarak saklanır.
+Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. GitHub Actions imzalama için `WINDOWS_SIGNING_CERTIFICATE_BASE64` ve `WINDOWS_SIGNING_PASSWORD` depodaki Actions secrets olarak ayarlanmalıdır; sertifika hem uygulama EXE'sini hem kurulum EXE'sini imzalar.
 
 Geliştirme sırasında uygulamayı depo kökünden çalıştırmak için:
 
@@ -61,6 +61,7 @@ Kaynak görünümü için [AvalonEdit](https://github.com/icsharpcode/AvalonEdit
 - EPUB paket bütünlüğü denetimi: ZIP/mimetype, container, OPF manifest/spine ve XHTML yapısı.
 - Seçili bölümü XHTML veya düz metin olarak içe/dışa aktarma. XHTML içe aktarımında betikler ve etkin olay öznitelikleri temizlenir.
 - Kitabı bölüm gezgini, kitap stilleri ve yerel resimlerle ayrı, salt-okunur okuyucu penceresinde önizleme.
+- WebView2 kullanıcı verileri yazılabilir `%LocalAppData%\EpubAtolyesi\WebView2` klasöründe saklanır; uygulama `Program Files` altına kurulduğunda yönetici izni gerekmez.
 - Düzenleme sırasında 30 saniyede bir kurtarma kopyası; uygulama yeniden açıldığında kurtarma sorusu. Kaydetme veya değişiklikleri bilerek atma kurtarma kopyasını temizler.
 - Tembel bölüm yükleme ve arka plan kelime sayımı korunur; kurtarma kopyası EPUB paketinin kendisini saklar ve kaynak dosyanın kirli durumunu değiştirmez.
 

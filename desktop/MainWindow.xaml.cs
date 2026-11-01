@@ -85,7 +85,8 @@ public partial class MainWindow : Window
         ApplyTheme(_viewModel.DarkTheme);
         try
         {
-            await EditorWebView.EnsureCoreWebView2Async();
+            var environment = await WebView2EnvironmentService.CreateAsync();
+            await EditorWebView.EnsureCoreWebView2Async(environment);
             EditorWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             EditorWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
             EditorWebView.CoreWebView2.WebMessageReceived += WebView_WebMessageReceived;

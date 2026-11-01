@@ -237,7 +237,8 @@ public sealed class ReaderPreviewWindow : Window
     {
         try
         {
-            await _webView.EnsureCoreWebView2Async();
+            var environment = await WebView2EnvironmentService.CreateAsync();
+            await _webView.EnsureCoreWebView2Async(environment);
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
             _webView.CoreWebView2.Settings.IsScriptEnabled = false;
