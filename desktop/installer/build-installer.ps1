@@ -1,5 +1,6 @@
 param(
-    [string]$InnoSetupCompiler
+    [string]$InnoSetupCompiler,
+    [string]$AppVersion = '0.0.3'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -54,12 +55,12 @@ if ([string]::IsNullOrWhiteSpace($InnoSetupCompiler) -or
     throw 'Inno Setup 6 was not found. Install it or pass its ISCC.exe path with -InnoSetupCompiler.'
 }
 
-& $InnoSetupCompiler (Join-Path $installerDirectory 'EpubAtolyesi.iss')
+& $InnoSetupCompiler "/DAppVersion=$AppVersion" (Join-Path $installerDirectory 'EpubAtolyesi.iss')
 if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup compilation failed with exit code $LASTEXITCODE."
 }
 
-$installerPath = Join-Path $outputDirectory 'EpubAtolyesi-Setup-x64-v0.0.2.exe'
+$installerPath = Join-Path $outputDirectory "EpubAtolyesi-Setup-x64-v$AppVersion.exe"
 if (-not (Test-Path $installerPath)) {
     throw "Expected installer was not created: $installerPath"
 }

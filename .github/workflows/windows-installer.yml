@@ -21,10 +21,15 @@ jobs:
         run: choco install innosetup --yes --no-progress
       - name: Build installer
         shell: pwsh
-        run: ./desktop/installer/build-installer.ps1
+        run: |
+          $version = '0.0.3'
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          }
+          ./desktop/installer/build-installer.ps1 -AppVersion $version
       - uses: actions/upload-artifact@v4
         with:
           name: EpubAtolyesi-Windows-Installer
-          path: desktop/installer/dist/EpubAtolyesi-Setup-x64-v0.0.2.exe
+          path: desktop/installer/dist/EpubAtolyesi-Setup-x64-*.exe
           if-no-files-found: error
           retention-days: 30

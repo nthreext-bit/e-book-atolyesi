@@ -29,7 +29,11 @@ public partial class App : Application
 		DispatcherUnhandledException += (_, args) =>
 		{
 			AppLogger.Write(args.Exception, "UI dispatcher exception");
-			MessageBox.Show(Strings.Get("Errors.App"), Strings.Get("Errors.AppTitle"), MessageBoxButton.OK, MessageBoxImage.Error);
+			MessageBox.Show(
+				Strings.Format("Errors.AppDetails", args.Exception, AppLogger.LogDirectoryPath),
+				Strings.Get("Errors.AppTitle"),
+				MessageBoxButton.OK,
+				MessageBoxImage.Error);
 			args.Handled = true;
 		};
 		AppDomain.CurrentDomain.UnhandledException += (_, args) =>

@@ -18,7 +18,7 @@ Windows'ta depo kökünden çalıştırın:
 
 Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olarak hazırlar, Microsoft imzalı WebView2 bootstrapper'ını indirir ve Inno Setup ile kurulum dosyasını oluşturur. Inno Setup 6 otomatik bulunamazsa `-InnoSetupCompiler` ile `ISCC.exe` yolunu belirtebilirsiniz.
 
-Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v0.0.2.exe`.
+Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v<version>.exe`. Sürümü `-AppVersion` ile belirtebilirsiniz.
 
 Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. Aynı yükleyici GitHub Actions'ta elle çalıştırılabilir veya `v*` etiketi gönderildiğinde oluşturulup indirilebilir bir iş artefaktı olarak saklanır.
 
@@ -28,6 +28,8 @@ Geliştirme sırasında uygulamayı depo kökünden çalıştırmak için:
 dotnet restore desktop/EpubStudio.csproj
 dotnet run --project desktop/EpubStudio.csproj
 ```
+
+Uygulama hataları `%AppData%\EpubAtolyesi\logs` altına yazılır. Günlük oluşturulamasa bile hata penceresi istisna ayrıntılarını ve günlük klasörünü gösterir; hata metni `Ctrl+C` ile kopyalanabilir.
 
 ## Aşama 1
 

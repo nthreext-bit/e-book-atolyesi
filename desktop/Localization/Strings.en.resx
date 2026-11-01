@@ -99,7 +99,15 @@
   <data name="Unsaved.Prompt" xml:space="preserve"><value>There are unsaved changes. Would you like to save them?</value></data>
   <data name="Unsaved.Title" xml:space="preserve"><value>Unsaved changes</value></data>
   <data name="Errors.AppTitle" xml:space="preserve"><value>Application error</value></data>
-  <data name="Errors.App" xml:space="preserve"><value>An unexpected error occurred. Details were written to the application log.</value></data>
+  <data name="Errors.AppDetails" xml:space="preserve"><value>An unexpected error occurred.
+
+Error details:
+{0}
+
+Log folder:
+{1}
+
+Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="Errors.EmptyRecent" xml:space="preserve"><value>No recent files</value></data>
   <data name="Errors.Help" xml:space="preserve"><value>EPUB Atölyesi&#10;Edit EPUB books and chapter content.</value></data>
   <data name="Errors.HelpTitle" xml:space="preserve"><value>Help</value></data>

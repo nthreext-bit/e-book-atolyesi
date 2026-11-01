@@ -8,6 +8,8 @@ public static class AppLogger
     private static readonly string LogDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EpubAtolyesi", "logs");
 
+    public static string LogDirectoryPath => LogDirectory;
+
     public static void Write(Exception exception, string context)
     {
         try
