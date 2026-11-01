@@ -14,13 +14,17 @@ namespace KitaplikEditoru.ViewModels;
 public partial class EditorViewModel : ObservableObject, IDisposable
 {
     private readonly EpubPackageService _packageService = new();
+    private readonly EpubValidator _epubValidator = new();
+    private readonly EpubRecoveryService _recoveryService;
     private readonly FileDialogService _fileDialogs = new();
     private readonly AppSettingsService _settingsService = new();
     private readonly AppSettings _settings;
     private EpubBook? _book;
+    private EpubRecoverySnapshot? _activeRecoverySnapshot;
 
     public EditorViewModel()
     {
+        _recoveryService = new EpubRecoveryService(_packageService);
         _settings = _settingsService.Load();
         BackupEnabled = _settings.CreateBackup;
         DarkTheme = _settings.DarkTheme;
@@ -219,9 +223,108 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         var destination = string.IsNullOrWhiteSpace(targetPath) ? _book.PackageFile : targetPath;
         await _packageService.SaveAsync(_book, destination, BackupEnabled, cancellationToken);
         CurrentFilePath = destination;
+        if (_activeRecoverySnapshot is not null)
+        {
+            _recoveryService.Delete(_activeRecoverySnapshot);
+            _activeRecoverySnapshot = null;
+        }
         AddRecentFile(destination);
         StatusMessage = "Kitap kaydedildi.";
         NotifyDocumentStateChanged();
+    }
+
+    public async Task<IReadOnlyList<EpubValidationIssue>> ValidateCurrentBookAsync(CancellationToken cancellationToken = default)
+    {
+        if (_book is null)
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToSave"));
+
+        var temporaryPath = Path.Combine(Path.GetTempPath(), $"EpubAtolyesi-validation-{Guid.NewGuid():N}.epub");
+        var validationPath = CurrentFilePath;
+        var deleteTemporaryFile = _book.IsDirty || string.IsNullOrWhiteSpace(validationPath) || !File.Exists(validationPath);
+        try
+        {
+            if (deleteTemporaryFile)
+            {
+                await _packageService.CreateRecoverySnapshotAsync(_book, temporaryPath, cancellationToken);
+                validationPath = temporaryPath;
+            }
+            return await _epubValidator.ValidateAsync(validationPath, cancellationToken);
+        }
+        finally
+        {
+            if (deleteTemporaryFile && File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+    }
+
+    public async Task ImportCurrentSectionAsync(string sourcePath, CancellationToken cancellationToken = default)
+    {
+        if (_book is null || CurrentSection is null)
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToSave"));
+        await _packageService.ImportSectionContentAsync(CurrentSection, sourcePath, cancellationToken);
+        OnPropertyChanged(nameof(TotalWordCount));
+        OnPropertyChanged(nameof(CurrentWordCount));
+        OnPropertyChanged(nameof(TotalWordCountText));
+        OnPropertyChanged(nameof(CurrentWordCountText));
+        NotifyDocumentStateChanged();
+    }
+
+    public async Task ExportCurrentSectionAsync(string destinationPath, CancellationToken cancellationToken = default)
+    {
+        if (_book is null || CurrentSection is null)
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToSave"));
+        await EnsureSectionLoadedAsync(CurrentSection);
+        await _packageService.ExportSectionAsync(CurrentSection, destinationPath, cancellationToken);
+    }
+
+    public async Task<EpubBook> PrepareReaderPreviewAsync(CancellationToken cancellationToken = default)
+    {
+        if (_book is null)
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToSave"));
+        foreach (var section in _book.Sections)
+            await EnsureSectionLoadedAsync(section);
+        return _book;
+    }
+
+    public Task<EpubRecoverySnapshot?> FindRecoveryAsync() =>
+        Task.FromResult(_recoveryService.FindAll().FirstOrDefault());
+
+    public async Task RecoverAsync(EpubRecoverySnapshot snapshot, CancellationToken cancellationToken = default)
+    {
+        await OpenAsync(snapshot.EpubPath, cancellationToken);
+        if (_book is null || !string.Equals(CurrentFilePath, snapshot.EpubPath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        CurrentFilePath = snapshot.SourcePath ?? string.Empty;
+        _book.PackageFile = snapshot.SourcePath ?? string.Empty;
+        _book.IsPackageDirty = true;
+        _activeRecoverySnapshot = snapshot;
+        if (RecentFiles.Remove(snapshot.EpubPath))
+        {
+            _settings.RecentFiles = RecentFiles.ToList();
+            SaveSettings();
+        }
+        StatusMessage = Strings.Format("Recovery.Restored", snapshot.BookTitle);
+        NotifyDocumentStateChanged();
+    }
+
+    public async Task SaveRecoverySnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        if (_book is null || !_book.IsDirty)
+            return;
+        _activeRecoverySnapshot = await _recoveryService.SaveAsync(
+            _book, string.IsNullOrWhiteSpace(CurrentFilePath) ? null : CurrentFilePath,
+            _activeRecoverySnapshot, cancellationToken);
+    }
+
+    public void DiscardRecovery(EpubRecoverySnapshot snapshot) => _recoveryService.Delete(snapshot);
+
+    public void DiscardActiveRecovery()
+    {
+        if (_activeRecoverySnapshot is null)
+            return;
+        _recoveryService.Delete(_activeRecoverySnapshot);
+        _activeRecoverySnapshot = null;
     }
 
     public async Task<string> AddImageAsync(string imagePath, CancellationToken cancellationToken = default)
@@ -343,7 +446,8 @@ public partial class EditorViewModel : ObservableObject, IDisposable
 
     private void LoadBookMetadata(EpubBook book)
     {
-        Metadata = _packageService.ReadMetadata(book);
+        book.Metadata = _packageService.ReadMetadata(book);
+        Metadata = book.Metadata;
         TableOfContents.Clear();
     }
 
@@ -354,6 +458,7 @@ public partial class EditorViewModel : ObservableObject, IDisposable
             throw new InvalidOperationException("Önce bir EPUB açın.");
         }
         _packageService.SaveMetadata(_book, Metadata);
+        _book.Metadata = Metadata;
         BookTitle = _book.Title;
         NotifyDocumentStateChanged();
     }
@@ -532,7 +637,13 @@ public partial class EditorViewModel : ObservableObject, IDisposable
             return !IsDirty;
         }
 
-        return await ConfirmUnsavedChangesAsync();
+        var canContinue = await ConfirmUnsavedChangesAsync();
+        if (canContinue && _book?.IsDirty == true && _activeRecoverySnapshot is not null)
+        {
+            _recoveryService.Delete(_activeRecoverySnapshot);
+            _activeRecoverySnapshot = null;
+        }
+        return canContinue;
     }
 
     [RelayCommand]

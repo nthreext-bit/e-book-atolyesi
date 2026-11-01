@@ -13,6 +13,7 @@ public sealed class EpubPackageService
     private static readonly XNamespace DcNamespace = "http://purl.org/dc/elements/1.1/";
     private static readonly XNamespace DctermsNamespace = "http://purl.org/dc/terms/";
     private static readonly XNamespace EpubNamespace = "http://www.idpf.org/2007/ops";
+    private static readonly XNamespace ContainerNamespace = "urn:oasis:names:tc:opendocument:xmlns:container";
 
     public async Task<EpubBook> CreateNewAsync(CancellationToken cancellationToken = default)
     {
@@ -24,9 +25,8 @@ public sealed class EpubPackageService
         await File.WriteAllTextAsync(Path.Combine(workingDirectory, "mimetype"), "application/epub+zip", new UTF8Encoding(false), cancellationToken);
 
         var container = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"),
-            new XElement("container", new XAttribute("version", "1.0"),
-                new XAttribute("xmlns", "urn:oasis:names:tc:opendocument:xmlns:container"),
-                new XElement("rootfiles", new XElement("rootfile",
+            new XElement(ContainerNamespace + "container", new XAttribute("version", "1.0"),
+                new XElement(ContainerNamespace + "rootfiles", new XElement(ContainerNamespace + "rootfile",
                     new XAttribute("full-path", "OEBPS/content.opf"),
                     new XAttribute("media-type", "application/oebps-package+xml")))));
         container.Save(Path.Combine(workingDirectory, "META-INF", "container.xml"));
@@ -262,6 +262,131 @@ public sealed class EpubPackageService
         section.WordCount = data.WordCount;
         section.WordCountKnown = true;
         section.IsLoaded = true;
+    }
+
+    public async Task ImportSectionContentAsync(
+        EpubSection section,
+        string sourcePath,
+        CancellationToken cancellationToken = default)
+    {
+        if (new FileInfo(sourcePath).Length > 32 * 1024 * 1024)
+            throw new InvalidDataException("Imported section content exceeds the 32 MB size limit.");
+        var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+        var source = await File.ReadAllTextAsync(sourcePath, cancellationToken);
+        string content;
+        if (extension == ".txt")
+        {
+            var paragraphs = source.Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Select(line => string.IsNullOrWhiteSpace(line)
+                    ? new XElement(XhtmlNamespace + "p", new XElement(XhtmlNamespace + "br"))
+                    : new XElement(XhtmlNamespace + "p", line));
+            content = string.Concat(paragraphs.Select(paragraph => paragraph.ToString(SaveOptions.DisableFormatting)));
+        }
+        else if (extension is ".xhtml" or ".xml")
+        {
+            using var textReader = new StringReader(source);
+            using var reader = XmlReader.Create(textReader, new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null,
+                MaxCharactersInDocument = 32 * 1024 * 1024
+            });
+            var document = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
+            var body = document.Descendants().FirstOrDefault(element => element.Name.LocalName == "body")
+                ?? throw new InvalidDataException("Imported XHTML must contain a body element.");
+            SanitizeImportedContent(body);
+            content = string.Concat(body.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)));
+        }
+        else
+        {
+            throw new InvalidDataException("Only plain text (.txt) and well-formed XHTML (.xhtml) files can be imported.");
+        }
+
+        var fragment = XElement.Parse($"<fragment xmlns=\"{XhtmlNamespace}\">{content}</fragment>", LoadOptions.PreserveWhitespace);
+        section.ContentXhtml = string.Concat(fragment.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)));
+        section.IsLoaded = true;
+        section.IsDirty = true;
+        section.WordCount = fragment.Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        section.WordCountKnown = true;
+    }
+
+    public async Task ExportSectionAsync(
+        EpubSection section,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        var extension = Path.GetExtension(destinationPath).ToLowerInvariant();
+        var fragment = XElement.Parse($"<fragment xmlns=\"{XhtmlNamespace}\">{section.ContentXhtml}</fragment>", LoadOptions.PreserveWhitespace);
+        string content;
+        if (extension == ".txt")
+        {
+            content = FlattenPlainText(fragment).Trim();
+        }
+        else if (extension is ".xhtml" or ".xml")
+        {
+            var document = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"),
+                new XElement(XhtmlNamespace + "html",
+                    new XElement(XhtmlNamespace + "head", new XElement(XhtmlNamespace + "title", section.Title)),
+                    new XElement(XhtmlNamespace + "body", fragment.Nodes())));
+            content = document.ToString(SaveOptions.DisableFormatting);
+        }
+        else
+        {
+            throw new InvalidDataException("Only plain text (.txt) and XHTML (.xhtml) files can be exported.");
+        }
+
+        await File.WriteAllTextAsync(destinationPath, content, new UTF8Encoding(false), cancellationToken);
+    }
+
+    private static string FlattenPlainText(XNode node)
+    {
+        if (node is XText text)
+            return text.Value;
+        if (node is not XElement element)
+            return string.Empty;
+        if (element.Name.LocalName == "br")
+            return Environment.NewLine;
+
+        var content = string.Concat(element.Nodes().Select(FlattenPlainText));
+        return element.Name.LocalName is "p" or "div" or "li" or "blockquote" or "pre" or
+            "h1" or "h2" or "h3" or "h4" or "h5" or "h6"
+            ? content.TrimEnd() + Environment.NewLine
+            : content;
+    }
+
+    private static void SanitizeImportedContent(XElement body)
+    {
+        body.Descendants().Where(element =>
+                element.Name.LocalName is "script" or "iframe" or "object" or "embed" or "form" or "base" or "style" or "link" or "meta")
+            .Remove();
+        foreach (var element in body.DescendantsAndSelf())
+        {
+            foreach (var attribute in element.Attributes().ToArray())
+            {
+                var name = attribute.Name.LocalName;
+                var value = attribute.Value.TrimStart();
+                if (name.StartsWith("on", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("srcdoc", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("style", StringComparison.OrdinalIgnoreCase) ||
+                    ((name.Equals("href", StringComparison.OrdinalIgnoreCase) ||
+                      name.Equals("src", StringComparison.OrdinalIgnoreCase) ||
+                      name.Equals("xlink:href", StringComparison.OrdinalIgnoreCase)) &&
+                     HasUnsafeProtocol(value)))
+                    attribute.Remove();
+            }
+        }
+    }
+
+    private static bool HasUnsafeProtocol(string value)
+    {
+        var normalized = Regex.Replace(value, @"[\u0000-\u0020]+", string.Empty, RegexOptions.CultureInvariant);
+        return normalized.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("vbscript:", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("file:", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("//", StringComparison.Ordinal);
     }
 
     public async Task<int> CountSectionWordsAsync(EpubSection section, CancellationToken cancellationToken = default)
@@ -999,7 +1124,25 @@ public sealed class EpubPackageService
         return (content, title, wordCount);
     }
 
-    public async Task SaveAsync(EpubBook book, string targetPath, bool createBackup = false, CancellationToken cancellationToken = default)
+    public Task SaveAsync(
+        EpubBook book,
+        string targetPath,
+        bool createBackup = false,
+        CancellationToken cancellationToken = default) =>
+        SaveCoreAsync(book, targetPath, createBackup, cancellationToken, updateBookState: true);
+
+    public Task CreateRecoverySnapshotAsync(
+        EpubBook book,
+        string targetPath,
+        CancellationToken cancellationToken = default) =>
+        SaveCoreAsync(book, targetPath, createBackup: false, cancellationToken, updateBookState: false);
+
+    private async Task SaveCoreAsync(
+        EpubBook book,
+        string targetPath,
+        bool createBackup,
+        CancellationToken cancellationToken,
+        bool updateBookState)
     {
         foreach (var section in book.Sections.Where(section => section.IsDirty))
         {
@@ -1044,12 +1187,15 @@ public sealed class EpubPackageService
             }
 
             File.Move(temporaryArchive, fullTargetPath, overwrite: true);
-            book.PackageFile = fullTargetPath;
-            foreach (var section in book.Sections)
+            if (updateBookState)
             {
-                section.IsDirty = false;
+                book.PackageFile = fullTargetPath;
+                foreach (var section in book.Sections)
+                {
+                    section.IsDirty = false;
+                }
+                book.IsPackageDirty = false;
             }
-            book.IsPackageDirty = false;
         }
         finally
         {
@@ -1199,7 +1345,7 @@ public sealed class EpubPackageService
             var document = XDocument.Load(resource.FullPath, LoadOptions.PreserveWhitespace);
             if (resource.MediaType == "application/xhtml+xml")
             {
-                foreach (var anchor in document.Descendants().Where(element => element.Name.LocalName == "a"))
+                foreach (var anchor in document.Descendants().Where(element => element.Name.LocalName == "a").ToArray())
                 {
                     var href = (string?)anchor.Attribute("href");
                     if (href is null || !ResolvesToSection(resource.FullPath, href, book.WorkingDirectory, section.RelativePath)) continue;
@@ -1215,7 +1361,7 @@ public sealed class EpubPackageService
             }
             else
             {
-                foreach (var content in document.Descendants().Where(element => element.Name.LocalName == "content"))
+                foreach (var content in document.Descendants().Where(element => element.Name.LocalName == "content").ToArray())
                 {
                     var source = (string?)content.Attribute("src");
                     if (source is null || !ResolvesToSection(resource.FullPath, source, book.WorkingDirectory, section.RelativePath)) continue;

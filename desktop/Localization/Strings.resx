@@ -261,4 +261,47 @@
   <data name="Paste.Clean" xml:space="preserve"><value>Temizle ve kitap stiline uydur</value></data>
   <data name="Paste.Preserve" xml:space="preserve"><value>Biçimi koru</value></data>
   <data name="Paste.Plain" xml:space="preserve"><value>Sadece metin</value></data>
+  <data name="Book.Validate" xml:space="preserve"><value>EPUB bütünlüğünü denetle</value></data>
+  <data name="Book.ImportSection" xml:space="preserve"><value>Seçili bölüme içe aktar...</value></data>
+  <data name="Book.ExportSection" xml:space="preserve"><value>Seçili bölümü dışa aktar...</value></data>
+  <data name="View.ReaderPreview" xml:space="preserve"><value>Okuyucu önizlemesi</value></data>
+  <data name="Dialog.ImportContent" xml:space="preserve"><value>Bölüm içeriği içe aktar</value></data>
+  <data name="Dialog.ExportContent" xml:space="preserve"><value>Bölümü dışa aktar</value></data>
+  <data name="Dialog.ContentFileFilter" xml:space="preserve"><value>XHTML veya metin|*.xhtml;*.xml;*.txt</value></data>
+  <data name="Tools.ValidationSummary" xml:space="preserve"><value>Denetim tamamlandı: {0} hata, {1} uyarı.</value></data>
+  <data name="Validation.Error" xml:space="preserve"><value>HATA</value></data>
+  <data name="Validation.Warning" xml:space="preserve"><value>UYARI</value></data>
+  <data name="Validation.Information" xml:space="preserve"><value>BİLGİ</value></data>
+  <data name="Recovery.Prompt" xml:space="preserve"><value>Kaydedilmemiş “{0}” kitabının kurtarma kopyası bulundu ({1:g}). Kurtarılsın mı?</value></data>
+  <data name="Recovery.Restored" xml:space="preserve"><value>“{0}” kurtarma kopyasından yüklendi. Değişiklikleri korumak için kitabı kaydedin.</value></data>
+  <data name="Recovery.SaveError" xml:space="preserve"><value>Kurtarma kopyası oluşturulamadı: {0}</value></data>
+  <data name="Recovery.RestoreError" xml:space="preserve"><value>Kurtarma kopyası açılamadı: {0}</value></data>
+  <data name="Dialog.XhtmlFormat" xml:space="preserve"><value>XHTML belgesi</value></data>
+  <data name="Dialog.TextFormat" xml:space="preserve"><value>Düz metin</value></data>
+  <data name="Tools.ExportSuccess" xml:space="preserve"><value>Bölüm dışa aktarıldı: {0}</value></data>
+  <data name="Reader.Title" xml:space="preserve"><value>Okuyucu önizlemesi — {0}</value></data>
+  <data name="Validation.EmptyArchive" xml:space="preserve"><value>EPUB arşivi boş.</value></data>
+  <data name="Validation.DuplicatePath" xml:space="preserve"><value>Arşivde aynı yol birden fazla kez bulunuyor.</value></data>
+  <data name="Validation.MimetypeFirst" xml:space="preserve"><value>mimetype dosyası ZIP içindeki ilk girdi olmalıdır.</value></data>
+  <data name="Validation.MimetypeMissing" xml:space="preserve"><value>Zorunlu mimetype dosyası eksik.</value></data>
+  <data name="Validation.MimetypeCompressed" xml:space="preserve"><value>mimetype dosyası sıkıştırılmadan saklanmalıdır.</value></data>
+  <data name="Validation.MimetypeInvalid" xml:space="preserve"><value>mimetype değeri geçersiz.</value></data>
+  <data name="Validation.ContainerMissing" xml:space="preserve"><value>Zorunlu container dosyası eksik.</value></data>
+  <data name="Validation.PackagePathInvalid" xml:space="preserve"><value>Güvenli paket belgesi yolu bulunamadı.</value></data>
+  <data name="Validation.PackageMissing" xml:space="preserve"><value>Paket belgesi arşivde bulunamadı.</value></data>
+  <data name="Validation.ManifestSpineMissing" xml:space="preserve"><value>Paket belgesinde manifest veya spine bölümü eksik.</value></data>
+  <data name="Validation.MetadataMissing" xml:space="preserve"><value>Zorunlu “{0}” kitap üst verisi eksik.</value></data>
+  <data name="Validation.ManifestItemIncomplete" xml:space="preserve"><value>Bir manifest öğesinde id, href veya media-type eksik.</value></data>
+  <data name="Validation.ManifestIdDuplicate" xml:space="preserve"><value>“{0}” manifest kimliği yineleniyor.</value></data>
+  <data name="Validation.ManifestHrefInvalid" xml:space="preserve"><value>Manifest href değeri güvenli bir göreli arşiv yolu değil.</value></data>
+  <data name="Validation.ManifestResourceMissing" xml:space="preserve"><value>Manifest kaynağı arşivde bulunamadı.</value></data>
+  <data name="Validation.XhtmlRootMissing" xml:space="preserve"><value>XHTML kaynağında html belge öğesi bulunmalıdır.</value></data>
+  <data name="Validation.XhtmlBodyMissing" xml:space="preserve"><value>XHTML kaynağında body öğesi bulunamadı.</value></data>
+  <data name="Validation.SpineReferenceMissing" xml:space="preserve"><value>Spine içindeki “{0}” başvurusu manifest öğesine bağlı değil.</value></data>
+  <data name="Validation.NavigationMissing" xml:space="preserve"><value>EPUB 3 paketinde bir gezinme belgesi tanımlanmalıdır.</value></data>
+  <data name="Validation.PackageReadError" xml:space="preserve"><value>EPUB denetlenemedi: {0}</value></data>
+  <data name="Validation.Clean" xml:space="preserve"><value>Paket bütünlüğüyle ilgili bir sorun bulunmadı.</value></data>
+  <data name="Validation.XmlTooLarge" xml:space="preserve"><value>“{0}” XML girdisi izin verilen boyutu aşıyor.</value></data>
+  <data name="Validation.ResourceReferenceUnsafe" xml:space="preserve"><value>“{0}” kaynak başvurusu güvenli değil.</value></data>
+  <data name="Validation.ResourceReferenceMissing" xml:space="preserve"><value>“{0}” başvurulan kaynak arşivde yok.</value></data>
 </root>

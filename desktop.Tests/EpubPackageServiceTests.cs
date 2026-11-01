@@ -423,6 +423,122 @@ public sealed class EpubPackageServiceTests
         }
     }
 
+    [Fact]
+    public async Task ValidatorAcceptsWellFormedEpubAndReportsBrokenArchives()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0");
+        var invalidPath = Path.Combine(Path.GetTempPath(), $"invalid-{Guid.NewGuid():N}.epub");
+        await File.WriteAllTextAsync(invalidPath, "not a zip archive");
+        var validator = new EpubValidator();
+
+        try
+        {
+            var validIssues = await validator.ValidateAsync(fixturePath);
+            Assert.DoesNotContain(validIssues, issue => issue.Severity == EpubIssueSeverity.Error);
+
+            var invalidIssues = await validator.ValidateAsync(invalidPath);
+            Assert.Contains(invalidIssues, issue => issue.Severity == EpubIssueSeverity.Error);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(invalidPath);
+        }
+    }
+
+    [Fact]
+    public async Task ValidatorReportsMissingLocalContentResources()
+    {
+        var epubPath = Path.Combine(Path.GetTempPath(), $"broken-reference-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.CreateNewAsync();
+            book.Sections[0].ContentXhtml += "<img src=\"../Images/missing.png\" />";
+            book.Sections[0].IsLoaded = true;
+            book.Sections[0].IsDirty = true;
+            await service.CreateRecoverySnapshotAsync(book, epubPath);
+
+            var issues = await new EpubValidator().ValidateAsync(epubPath);
+
+            Assert.Contains(issues, issue =>
+                issue.Severity == EpubIssueSeverity.Error &&
+                issue.Message.Contains("missing", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            File.Delete(epubPath);
+        }
+    }
+
+    [Fact]
+    public async Task TextImportAndExportPreservesParagraphsAndSanitizesXhtml()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0");
+        var textPath = Path.Combine(Path.GetTempPath(), $"import-{Guid.NewGuid():N}.txt");
+        var xhtmlPath = Path.Combine(Path.GetTempPath(), $"import-{Guid.NewGuid():N}.xhtml");
+        var exportPath = Path.Combine(Path.GetTempPath(), $"export-{Guid.NewGuid():N}.txt");
+        await File.WriteAllTextAsync(textPath, "First paragraph\n\nSecond paragraph");
+        await File.WriteAllTextAsync(xhtmlPath,
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p onclick=\"alert(1)\">Safe <em>formatted</em> text</p><p>Second paragraph</p><script>unsafe()</script></body></html>");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.OpenAsync(fixturePath);
+            var section = book.Sections[0];
+            await service.ImportSectionContentAsync(section, textPath);
+            Assert.Contains("First paragraph", section.ContentXhtml);
+            Assert.Contains("Second paragraph", section.ContentXhtml);
+            Assert.Contains("<br", section.ContentXhtml);
+            Assert.True(section.IsDirty);
+
+            await service.ImportSectionContentAsync(section, xhtmlPath);
+            Assert.Contains("Safe", section.ContentXhtml);
+            Assert.DoesNotContain("onclick", section.ContentXhtml);
+            Assert.DoesNotContain("<script", section.ContentXhtml);
+            await service.ExportSectionAsync(section, exportPath);
+            Assert.Equal($"Safe formatted text{Environment.NewLine}Second paragraph", await File.ReadAllTextAsync(exportPath));
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(textPath);
+            File.Delete(xhtmlPath);
+            File.Delete(exportPath);
+        }
+    }
+
+    [Fact]
+    public async Task RecoverySnapshotKeepsSourceDirtyStateAndCanBeReopened()
+    {
+        var snapshotPath = Path.Combine(Path.GetTempPath(), $"recovery-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.CreateNewAsync();
+            var sourcePath = book.PackageFile;
+            book.Sections[0].ContentXhtml = "<h1>Recovered heading</h1><p>Recovered text</p>";
+            book.Sections[0].IsLoaded = true;
+            book.Sections[0].IsDirty = true;
+
+            await service.CreateRecoverySnapshotAsync(book, snapshotPath);
+
+            Assert.True(book.IsDirty);
+            Assert.Equal(sourcePath, book.PackageFile);
+            using var recovered = await service.OpenAsync(snapshotPath);
+            await service.LoadSectionAsync(recovered.Sections[0]);
+            Assert.Contains("Recovered heading", recovered.Sections[0].ContentXhtml);
+            Assert.Contains("Recovered text", recovered.Sections[0].ContentXhtml);
+        }
+        finally
+        {
+            File.Delete(snapshotPath);
+        }
+    }
+
     private static async Task<string> CreateFixtureAsync(string version, bool includeSecondSection = false)
     {
         var path = Path.Combine(Path.GetTempPath(), $"fixture-{Guid.NewGuid():N}.epub");

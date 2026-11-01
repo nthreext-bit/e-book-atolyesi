@@ -45,12 +45,17 @@
         <MenuItem Header="{DynamicResource Book.GenerateToc}" Click="GenerateToc_Click" />
         <MenuItem Header="{DynamicResource Book.SplitSection}" Click="SplitSection_Click" />
         <MenuItem Header="{DynamicResource Book.MergeSection}" Click="MergeSection_Click" />
+        <Separator />
+        <MenuItem Header="{DynamicResource Book.Validate}" Click="ValidateBook_Click" />
+        <MenuItem Header="{DynamicResource Book.ImportSection}" Click="ImportSection_Click" />
+        <MenuItem Header="{DynamicResource Book.ExportSection}" Click="ExportSection_Click" />
       </MenuItem>
       <MenuItem Header="{DynamicResource Menu.View}">
         <MenuItem x:Name="LeftPanelToggle" Header="{DynamicResource View.LeftPanel}" IsCheckable="True" IsChecked="True" />
         <MenuItem x:Name="PalettePanelToggle" Header="{DynamicResource View.RightPanel}" IsCheckable="True" IsChecked="True" />
         <Separator />
         <MenuItem Header="{DynamicResource View.DarkTheme}" IsCheckable="True" IsChecked="{Binding DarkTheme, Mode=TwoWay}" />
+        <MenuItem Header="{DynamicResource View.ReaderPreview}" Click="ReaderPreview_Click" />
       </MenuItem>
       <MenuItem Header="{DynamicResource Menu.Help}" Click="Help_Click" />
     </Menu>

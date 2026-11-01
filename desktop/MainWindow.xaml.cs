@@ -13,12 +13,14 @@ using KitaplikEditoru.ViewModels;
 using ICSharpCode.AvalonEdit.Highlighting;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
+using System.Windows.Threading;
 
 namespace KitaplikEditoru;
 
 public partial class MainWindow : Window
 {
     private readonly EditorViewModel _viewModel = new();
+    private readonly DispatcherTimer _recoveryTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private bool _webViewReady;
     private bool _isLoadingContent;
     private string? _mappedWorkingDirectory;
@@ -27,6 +29,8 @@ public partial class MainWindow : Window
     private Point _dragStart;
     private bool _allowClose;
     private bool _closePromptOpen;
+    private bool _recoverySnapshotInProgress;
+    private Task? _recoverySnapshotTask;
     private bool _sourceMode;
     private bool _updatingSource;
     private string? _pendingTocFragment;
@@ -45,7 +49,12 @@ public partial class MainWindow : Window
         ApplyTheme(_viewModel.DarkTheme);
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
-        Closed += (_, _) => _viewModel.Dispose();
+        Closed += (_, _) =>
+        {
+            _recoveryTimer.Stop();
+            _viewModel.Dispose();
+        };
+        _recoveryTimer.Tick += RecoveryTimer_Tick;
         _viewModel.ConfirmUnsavedChangesAsync = ConfirmUnsavedChangesAsync;
         _viewModel.PropertyChanged += (_, args) =>
         {
@@ -88,6 +97,16 @@ public partial class MainWindow : Window
             _webViewReady = true;
             await EditorWebView.ExecuteScriptAsync($"setTheme({(_viewModel.DarkTheme ? "true" : "false")});");
             UpdateEditorVisibility();
+            try
+            {
+                await CheckForRecoveryAsync();
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Write(exception, "Recovery check failed");
+                _viewModel.StatusMessage = Strings.Format("Recovery.RestoreError", exception.Message);
+            }
+            _recoveryTimer.Start();
         }
         catch (Exception exception) when (exception is WebView2RuntimeNotFoundException or InvalidOperationException)
         {
@@ -100,6 +119,66 @@ public partial class MainWindow : Window
             NoBookPanel.Visibility = Visibility.Collapsed;
             WebViewWarning.Visibility = Visibility.Visible;
             _viewModel.StatusMessage = Strings.Format("Tools.WebViewStartupError", exception.Message);
+        }
+    }
+
+    private async Task CheckForRecoveryAsync()
+    {
+        var snapshot = await _viewModel.FindRecoveryAsync();
+        if (snapshot is null)
+            return;
+
+        var result = MessageBox.Show(this,
+            Strings.Format("Recovery.Prompt", snapshot.BookTitle, snapshot.UpdatedAt.LocalDateTime),
+            Strings.Get("App.Title"), MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                await _viewModel.RecoverAsync(snapshot);
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Write(exception, "Recovery restore failed");
+                MessageBox.Show(this, Strings.Format("Recovery.RestoreError", exception.Message),
+                    Strings.Get("Tools.ErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        else
+        {
+            _viewModel.DiscardRecovery(snapshot);
+        }
+    }
+
+    private async void RecoveryTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!_viewModel.IsDirty || _recoverySnapshotInProgress)
+            return;
+        _recoverySnapshotInProgress = true;
+        var snapshotTask = SaveRecoverySnapshotAsync();
+        _recoverySnapshotTask = snapshotTask;
+        try
+        {
+            await snapshotTask;
+        }
+        finally
+        {
+            _recoverySnapshotTask = null;
+            _recoverySnapshotInProgress = false;
+        }
+    }
+
+    private async Task SaveRecoverySnapshotAsync()
+    {
+        try
+        {
+            await CaptureEditorContentAsync();
+            await _viewModel.SaveRecoverySnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Write(exception, "Periodic recovery snapshot failed");
+            _viewModel.StatusMessage = Strings.Format("Recovery.SaveError", exception.Message);
         }
     }
 
@@ -677,6 +756,155 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void ValidateBook_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await CaptureEditorContentAsync();
+            var issues = await _viewModel.ValidateCurrentBookAsync();
+            var errorCount = issues.Count(issue => issue.Severity == EpubIssueSeverity.Error);
+            var warningCount = issues.Count(issue => issue.Severity == EpubIssueSeverity.Warning);
+            _viewModel.StatusMessage = Strings.Format("Tools.ValidationSummary", errorCount, warningCount);
+            var report = string.Join(Environment.NewLine, issues.Select(issue =>
+            {
+                var severity = Strings.Get($"Validation.{issue.Severity}");
+                var path = string.IsNullOrWhiteSpace(issue.Path) ? string.Empty : $" [{issue.Path}]";
+                return $"{severity}{path}: {issue.Message}";
+            }));
+            var window = new Window
+            {
+                Owner = this,
+                Title = Strings.Get("Book.Validate"),
+                Width = 760,
+                Height = 520,
+                MinWidth = 480,
+                MinHeight = 320,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Content = new TextBox
+                {
+                    Text = report,
+                    IsReadOnly = true,
+                    AcceptsReturn = true,
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Margin = new Thickness(12),
+                    FontFamily = new System.Windows.Media.FontFamily("Consolas")
+                }
+            };
+            window.ShowDialog();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "EPUB validation failed");
+        }
+    }
+
+    private async void ImportSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.CurrentSection is null)
+            return;
+        var dialog = new OpenFileDialog
+        {
+            Title = Strings.Get("Dialog.ImportContent"),
+            Filter = Strings.Get("Dialog.ContentFileFilter"),
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            await CaptureEditorContentAsync();
+            await _viewModel.ImportCurrentSectionAsync(dialog.FileName);
+            if (_sourceMode)
+            {
+                _updatingSource = true;
+                SourceEditor.Text = _viewModel.CurrentSection?.ContentXhtml ?? string.Empty;
+                _updatingSource = false;
+            }
+            else
+            {
+                await LoadCurrentSectionAsync();
+            }
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Section import failed");
+        }
+    }
+
+    private async void ExportSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.CurrentSection is null)
+            return;
+        var dialog = new SaveFileDialog
+        {
+            Title = Strings.Get("Dialog.ExportContent"),
+            Filter = $"{Strings.Get("Dialog.XhtmlFormat")}|*.xhtml|{Strings.Get("Dialog.TextFormat")}|*.txt",
+            DefaultExt = ".xhtml",
+            AddExtension = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            await CaptureEditorContentAsync();
+            await _viewModel.ExportCurrentSectionAsync(dialog.FileName);
+            _viewModel.StatusMessage = Strings.Format("Tools.ExportSuccess", Path.GetFileName(dialog.FileName));
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Section export failed");
+        }
+    }
+
+    private async void ReaderPreview_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await CaptureEditorContentAsync();
+            var book = await _viewModel.PrepareReaderPreviewAsync();
+            var snapshot = CreateReaderSnapshot(book);
+            var html = await Task.Run(() => ReaderPreviewWindow.BuildHtml(snapshot));
+            var window = new ReaderPreviewWindow(
+                Strings.Format("Reader.Title", book.Title), html) { Owner = this };
+            window.Show();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Reader preview failed");
+        }
+    }
+
+    private static EpubBook CreateReaderSnapshot(EpubBook source)
+    {
+        var snapshot = new EpubBook
+        {
+            PackageFile = string.Empty,
+            WorkingDirectory = source.WorkingDirectory,
+            PackageRelativePath = source.PackageRelativePath,
+            Title = source.Title
+        };
+        snapshot.Resources.AddRange(source.Resources);
+        foreach (var section in source.Sections)
+        {
+            snapshot.Sections.Add(new EpubSection
+            {
+                Id = section.Id,
+                RelativePath = section.RelativePath,
+                FilePath = section.FilePath,
+                Title = section.Title,
+                ContentXhtml = section.ContentXhtml,
+                IsLoaded = true,
+                WordCount = section.WordCount,
+                WordCountKnown = section.WordCountKnown
+            });
+        }
+        return snapshot;
+    }
+
     private async void SetCover_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog { Title = Strings.Get("Dialog.CoverImage"), Filter = Strings.Get("Dialog.ImagesFilter") };
@@ -976,6 +1204,7 @@ public partial class MainWindow : Window
 
     private async Task SaveDocumentAsync()
     {
+        await WaitForRecoverySnapshotAsync();
         if (_sourceMode)
         {
             try
@@ -995,6 +1224,7 @@ public partial class MainWindow : Window
 
     private async Task SaveDocumentAsAsync()
     {
+        await WaitForRecoverySnapshotAsync();
         if (_sourceMode)
         {
             try
@@ -1010,6 +1240,12 @@ public partial class MainWindow : Window
         }
         await CaptureEditorContentAsync();
         await _viewModel.SaveAsCommand.ExecuteAsync(null);
+    }
+
+    private async Task WaitForRecoverySnapshotAsync()
+    {
+        if (_recoverySnapshotTask is not null)
+            await _recoverySnapshotTask;
     }
 
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -1095,9 +1331,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        _recoveryTimer.Stop();
         _closePromptOpen = true;
         try
         {
+            if (_recoverySnapshotTask is not null)
+                await _recoverySnapshotTask;
             await CaptureEditorContentAsync();
             if (!_viewModel.IsDirty)
             {
@@ -1115,11 +1354,14 @@ public partial class MainWindow : Window
         finally
         {
             _closePromptOpen = false;
+            if (!_allowClose)
+                _recoveryTimer.Start();
         }
     }
 
     private async Task<bool> ConfirmUnsavedChangesAsync()
     {
+        await WaitForRecoverySnapshotAsync();
         await CaptureEditorContentAsync();
         if (!_viewModel.IsDirty)
         {
@@ -1134,6 +1376,7 @@ public partial class MainWindow : Window
 
         if (result == MessageBoxResult.No)
         {
+            _viewModel.DiscardActiveRecovery();
             return true;
         }
 

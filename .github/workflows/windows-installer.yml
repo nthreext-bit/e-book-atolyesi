@@ -1,0 +1,30 @@
+name: Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: ./desktop/installer/build-installer.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EpubAtolyesi-Windows-Installer
+          path: desktop/installer/dist/EpubAtolyesi-Setup-x64-v0.0.2.exe
+          if-no-files-found: error
+          retention-days: 30

@@ -261,4 +261,47 @@
   <data name="Paste.Clean" xml:space="preserve"><value>Clean and adapt to book styles</value></data>
   <data name="Paste.Preserve" xml:space="preserve"><value>Preserve formatting</value></data>
   <data name="Paste.Plain" xml:space="preserve"><value>Plain text</value></data>
+  <data name="Book.Validate" xml:space="preserve"><value>Validate EPUB package</value></data>
+  <data name="Book.ImportSection" xml:space="preserve"><value>Import into selected section...</value></data>
+  <data name="Book.ExportSection" xml:space="preserve"><value>Export selected section...</value></data>
+  <data name="View.ReaderPreview" xml:space="preserve"><value>Reader preview</value></data>
+  <data name="Dialog.ImportContent" xml:space="preserve"><value>Import section content</value></data>
+  <data name="Dialog.ExportContent" xml:space="preserve"><value>Export section</value></data>
+  <data name="Dialog.ContentFileFilter" xml:space="preserve"><value>XHTML or text|*.xhtml;*.xml;*.txt</value></data>
+  <data name="Tools.ValidationSummary" xml:space="preserve"><value>Validation complete: {0} errors, {1} warnings.</value></data>
+  <data name="Validation.Error" xml:space="preserve"><value>ERROR</value></data>
+  <data name="Validation.Warning" xml:space="preserve"><value>WARNING</value></data>
+  <data name="Validation.Information" xml:space="preserve"><value>INFO</value></data>
+  <data name="Recovery.Prompt" xml:space="preserve"><value>A recovery copy of the unsaved book “{0}” was found ({1:g}). Restore it?</value></data>
+  <data name="Recovery.Restored" xml:space="preserve"><value>“{0}” was restored from a recovery copy. Save the book to keep these changes.</value></data>
+  <data name="Recovery.SaveError" xml:space="preserve"><value>Could not create a recovery copy: {0}</value></data>
+  <data name="Recovery.RestoreError" xml:space="preserve"><value>Could not open the recovery copy: {0}</value></data>
+  <data name="Dialog.XhtmlFormat" xml:space="preserve"><value>XHTML document</value></data>
+  <data name="Dialog.TextFormat" xml:space="preserve"><value>Plain text</value></data>
+  <data name="Tools.ExportSuccess" xml:space="preserve"><value>Section exported: {0}</value></data>
+  <data name="Reader.Title" xml:space="preserve"><value>Reader preview — {0}</value></data>
+  <data name="Validation.EmptyArchive" xml:space="preserve"><value>The EPUB archive is empty.</value></data>
+  <data name="Validation.DuplicatePath" xml:space="preserve"><value>The archive contains a duplicate path.</value></data>
+  <data name="Validation.MimetypeFirst" xml:space="preserve"><value>The mimetype file must be the first ZIP entry.</value></data>
+  <data name="Validation.MimetypeMissing" xml:space="preserve"><value>The required mimetype file is missing.</value></data>
+  <data name="Validation.MimetypeCompressed" xml:space="preserve"><value>The mimetype file must be stored without compression.</value></data>
+  <data name="Validation.MimetypeInvalid" xml:space="preserve"><value>The mimetype value is invalid.</value></data>
+  <data name="Validation.ContainerMissing" xml:space="preserve"><value>The required container file is missing.</value></data>
+  <data name="Validation.PackagePathInvalid" xml:space="preserve"><value>A safe package document path is missing.</value></data>
+  <data name="Validation.PackageMissing" xml:space="preserve"><value>The package document does not exist in the archive.</value></data>
+  <data name="Validation.ManifestSpineMissing" xml:space="preserve"><value>The package document must contain a manifest and spine.</value></data>
+  <data name="Validation.MetadataMissing" xml:space="preserve"><value>Required book metadata '{0}' is missing.</value></data>
+  <data name="Validation.ManifestItemIncomplete" xml:space="preserve"><value>A manifest item is missing its id, href, or media-type.</value></data>
+  <data name="Validation.ManifestIdDuplicate" xml:space="preserve"><value>Manifest id '{0}' is duplicated.</value></data>
+  <data name="Validation.ManifestHrefInvalid" xml:space="preserve"><value>The manifest href is not a safe relative archive path.</value></data>
+  <data name="Validation.ManifestResourceMissing" xml:space="preserve"><value>The manifest resource is missing from the archive.</value></data>
+  <data name="Validation.XhtmlRootMissing" xml:space="preserve"><value>The XHTML resource must have an html document element.</value></data>
+  <data name="Validation.XhtmlBodyMissing" xml:space="preserve"><value>The XHTML resource does not contain a body element.</value></data>
+  <data name="Validation.SpineReferenceMissing" xml:space="preserve"><value>Spine itemref '{0}' has no manifest item.</value></data>
+  <data name="Validation.NavigationMissing" xml:space="preserve"><value>An EPUB 3 package should declare a navigation document.</value></data>
+  <data name="Validation.PackageReadError" xml:space="preserve"><value>The EPUB could not be validated: {0}</value></data>
+  <data name="Validation.Clean" xml:space="preserve"><value>No package integrity issues were found.</value></data>
+  <data name="Validation.XmlTooLarge" xml:space="preserve"><value>XML entry '{0}' exceeds the permitted size.</value></data>
+  <data name="Validation.ResourceReferenceUnsafe" xml:space="preserve"><value>Resource reference '{0}' is unsafe.</value></data>
+  <data name="Validation.ResourceReferenceMissing" xml:space="preserve"><value>Referenced resource '{0}' is missing from the archive.</value></data>
 </root>

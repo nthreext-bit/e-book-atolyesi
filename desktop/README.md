@@ -4,27 +4,30 @@ Windows 10/11 için WPF tabanlı EPUB düzenleyicisi. Masaüstü uygulaması, de
 
 ## Gereksinimler
 
-- Windows 10 veya 11
-- .NET 8 SDK
-- Microsoft Edge WebView2 Runtime. Self-contained yayın, WebView2 Runtime'ı paketlemez. Runtime bulunamazsa uygulama indirme bağlantısı gösterir.
+- Kurulum için Windows 10/11 x64. Yükleyici uygulamayı .NET 8 çalışma zamanını ayrıca gerektirmeyen biçimde kurar.
+- WebView2 Runtime yoksa yükleyici, Microsoft'un imzalı WebView2 bootstrapper'ını çalıştırarak Runtime'ı kurar; bunun için internet bağlantısı gerekir.
+- Kaynaktan derleme için .NET 8 SDK, Inno Setup 6 ve Microsoft WebView2 bootstrapper'ını indirmek için internet bağlantısı gerekir.
 
-## Derleme ve Çalıştırma
+## Windows Yükleyicisi Oluşturma
 
-Depo kökünden:
+Windows'ta depo kökünden çalıştırın:
+
+```powershell
+.\desktop\installer\build-installer.ps1
+```
+
+Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olarak hazırlar, Microsoft imzalı WebView2 bootstrapper'ını indirir ve Inno Setup ile kurulum dosyasını oluşturur. Inno Setup 6 otomatik bulunamazsa `-InnoSetupCompiler` ile `ISCC.exe` yolunu belirtebilirsiniz.
+
+Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v0.0.2.exe`.
+
+Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. Aynı yükleyici GitHub Actions'ta elle çalıştırılabilir veya `v*` etiketi gönderildiğinde oluşturulup indirilebilir bir iş artefaktı olarak saklanır.
+
+Geliştirme sırasında uygulamayı depo kökünden çalıştırmak için:
 
 ```powershell
 dotnet restore desktop/EpubStudio.csproj
-dotnet build desktop/EpubStudio.csproj --configuration Release
 dotnet run --project desktop/EpubStudio.csproj
 ```
-
-Tek dosya, self-contained x64 yayın:
-
-```powershell
-dotnet publish desktop/EpubStudio.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-```
-
-Çıktı `desktop/bin/Release/net8.0-windows/win-x64/publish/EpubAtolyesi.exe` konumuna yazılır. WebView2 Evergreen Runtime ayrıca kurulu olmalıdır.
 
 ## Aşama 1
 
@@ -53,12 +56,18 @@ Kaynak görünümü için [AvalonEdit](https://github.com/icsharpcode/AvalonEdit
 
 ## Aşama 3
 
-EPUB denetimi, içe/dışa aktarma, okuyucu önizlemesi, otomatik kurtarma, performans ve cilalama.
+- EPUB paket bütünlüğü denetimi: ZIP/mimetype, container, OPF manifest/spine ve XHTML yapısı.
+- Seçili bölümü XHTML veya düz metin olarak içe/dışa aktarma. XHTML içe aktarımında betikler ve etkin olay öznitelikleri temizlenir.
+- Kitabı bölüm gezgini, kitap stilleri ve yerel resimlerle ayrı, salt-okunur okuyucu penceresinde önizleme.
+- Düzenleme sırasında 30 saniyede bir kurtarma kopyası; uygulama yeniden açıldığında kurtarma sorusu. Kaydetme veya değişiklikleri bilerek atma kurtarma kopyasını temizler.
+- Tembel bölüm yükleme ve arka plan kelime sayımı korunur; kurtarma kopyası EPUB paketinin kendisini saklar ve kaynak dosyanın kirli durumunu değiştirmez.
 
 ## Testler
 
-EPUB 2/3 paketleriyle değiştirmeden aç-kaydet-yeniden aç, bilinmeyen metadata koruma, XHTML düzenleme, spine sıralama, bölüm silme/yeniden adlandırma ve backup testleri `desktop.Tests` projesinde bulunur.
+EPUB 2/3 paketleriyle değiştirmeden aç-kaydet-yeniden aç, bilinmeyen metadata koruma, XHTML düzenleme, spine sıralama, bölüm silme/yeniden adlandırma, yedekleme, paket doğrulama, içerik aktarımı ve kurtarma anlık görüntüsü testleri `desktop.Tests` projesinde bulunur.
 
 ```powershell
 dotnet test desktop.Tests/EpubStudio.Tests.csproj --configuration Release
 ```
+
+Her aşamanın yayın öncesi uyumluluk kontrolünde EPUB 2 ve EPUB 3 kitaplarını uygulamada açıp ayrı kopyalara kaydedin. Kaydedilen dosyaları EPUB Atölyesi denetiminden ve Calibre gibi bağımsız bir okuyucu/kitaplık aracından geçirin; içindekiler, bölüm sırası, metin, görseller ve üst verileri karşılaştırın. Calibre'de yeniden kaydedilen kopyayı da EPUB Atölyesi'nde açıp temel içeriğin korunduğunu doğrulayın. Gerçek kullanıcı kitaplarıyla yapılan testlerde orijinal dosyaları değiştirmeyin; her zaman geçici kopyalar kullanın.
