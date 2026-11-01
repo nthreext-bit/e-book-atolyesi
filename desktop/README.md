@@ -20,7 +20,7 @@ Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olara
 
 Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v<version>.exe`. Sürümü `-AppVersion` ile belirtebilirsiniz.
 
-Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. Aynı yükleyici GitHub Actions'ta elle çalıştırılabilir veya `v*` etiketi gönderildiğinde oluşturulup indirilebilir bir iş artefaktı olarak saklanır.
+Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. Aynı yükleyici GitHub Actions'ta elle çalıştırılabilir veya `v*` etiketi gönderildiğinde oluşturulup indirilebilir bir iş artefaktı olarak saklanır.
 
 Geliştirme sırasında uygulamayı depo kökünden çalıştırmak için:
 
