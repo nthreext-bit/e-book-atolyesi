@@ -1,7 +1,8 @@
 param(
     [string]$InnoSetupCompiler,
     [string]$AppVersion = '0.0.4',
-    [switch]$RequireSigning
+    [switch]$RequireSigning,
+    [switch]$SelfSignedSigning
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,15 +22,21 @@ $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
 $hasSigningPassword = -not [string]::IsNullOrWhiteSpace($certificatePassword)
+$selfSignedCertificate = $null
+$signingThumbprint = $null
+$temporaryTrustInstalled = $false
 if ($hasSigningCertificate -ne $hasSigningPassword) {
     throw 'Set both WINDOWS_SIGNING_CERTIFICATE_BASE64 and WINDOWS_SIGNING_PASSWORD to sign the installer.'
 }
-if ($RequireSigning -and -not $hasSigningCertificate) {
-    throw 'Signing is required, but the Windows code-signing certificate secrets are not configured.'
+if ($hasSigningCertificate -and $SelfSignedSigning) {
+    throw 'Choose either a configured code-signing certificate or self-signed signing, not both.'
+}
+if ($RequireSigning -and -not $hasSigningCertificate -and -not $SelfSignedSigning) {
+    throw 'Signing is required. Configure the code-signing certificate secrets or enable self-signed signing.'
 }
 
 $signTool = $null
-if ($hasSigningCertificate) {
+if ($hasSigningCertificate -or $SelfSignedSigning) {
     $signToolCommand = Get-Command 'signtool.exe' -ErrorAction SilentlyContinue
     if ($signToolCommand) {
         $signTool = $signToolCommand.Source
@@ -44,19 +51,47 @@ if ($hasSigningCertificate) {
     if ([string]::IsNullOrWhiteSpace($signTool)) {
         throw 'Windows SDK signtool.exe was not found.'
     }
-    [System.IO.File]::WriteAllBytes(
-        $signingCertificatePath,
-        [Convert]::FromBase64String($certificateBase64))
+    if ($SelfSignedSigning) {
+        $selfSignedCertificate = New-SelfSignedCertificate `
+            -Type CodeSigningCert `
+            -Subject 'CN=EPUB Atölyesi (Self-Signed)' `
+            -CertStoreLocation 'Cert:\CurrentUser\My' `
+            -KeyAlgorithm RSA `
+            -KeyLength 3072 `
+            -HashAlgorithm SHA256 `
+            -NotAfter (Get-Date).AddYears(2)
+        $signingThumbprint = $selfSignedCertificate.Thumbprint
+        $publicCertificatePath = Join-Path $outputDirectory "EpubAtolyesi-SelfSigned-v$AppVersion.cer"
+        Export-Certificate -Cert $selfSignedCertificate -FilePath $publicCertificatePath | Out-Null
+        Import-Certificate -FilePath $publicCertificatePath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null
+        $temporaryTrustInstalled = $true
+    }
+    elseif ($hasSigningCertificate) {
+        [System.IO.File]::WriteAllBytes(
+            $signingCertificatePath,
+            [Convert]::FromBase64String($certificateBase64))
+    }
 }
 
 function Sign-Executable([string]$Path) {
-    & $signTool sign `
-        /f $signingCertificatePath `
-        /p $certificatePassword `
-        /fd SHA256 `
-        /tr 'http://timestamp.digicert.com' `
-        /td SHA256 `
-        $Path
+    if ($signingThumbprint) {
+        & $signTool sign `
+            /s My `
+            /sha1 $signingThumbprint `
+            /fd SHA256 `
+            /tr 'http://timestamp.digicert.com' `
+            /td SHA256 `
+            $Path
+    }
+    else {
+        & $signTool sign `
+            /f $signingCertificatePath `
+            /p $certificatePassword `
+            /fd SHA256 `
+            /tr 'http://timestamp.digicert.com' `
+            /td SHA256 `
+            $Path
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Authenticode signing failed for $Path with exit code $LASTEXITCODE."
     }
@@ -131,5 +166,11 @@ Write-Output "Installer created: $installerPath"
 finally {
     if (Test-Path $signingCertificatePath) {
         Remove-Item -LiteralPath $signingCertificatePath -Force
+    }
+    if ($temporaryTrustInstalled) {
+        Remove-Item "Cert:\CurrentUser\Root\$signingThumbprint" -Force
+    }
+    if ($selfSignedCertificate) {
+        Remove-Item "Cert:\CurrentUser\My\$signingThumbprint" -Force
     }
 }

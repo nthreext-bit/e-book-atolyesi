@@ -16,11 +16,11 @@ Windows'ta depo kökünden çalıştırın:
 .\desktop\installer\build-installer.ps1
 ```
 
-Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olarak hazırlar, Microsoft imzalı WebView2 bootstrapper'ını indirir ve Inno Setup ile kurulum dosyasını oluşturur. İmzalama için geçerli bir Authenticode kod imzalama sertifikasını PFX olarak Base64 kodlayıp `WINDOWS_SIGNING_CERTIFICATE_BASE64` ve `WINDOWS_SIGNING_PASSWORD` ortam değişkenlerine koyun; `-RequireSigning` eksik sertifikada derlemeyi durdurur. Inno Setup 6 otomatik bulunamazsa `-InnoSetupCompiler` ile `ISCC.exe` yolunu belirtebilirsiniz.
+Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olarak hazırlar, Microsoft imzalı WebView2 bootstrapper'ını indirir ve Inno Setup ile kurulum dosyasını oluşturur. Geçerli Authenticode sertifikası sağlanırsa `WINDOWS_SIGNING_CERTIFICATE_BASE64` ve `WINDOWS_SIGNING_PASSWORD` ortam değişkenleriyle imzalar; geliştirme/kişisel dağıtım için `-SelfSignedSigning` geçici bir self-signed sertifika üretir. İkisi de `-RequireSigning` ile zorunlu tutulabilir. Inno Setup 6 otomatik bulunamazsa `-InnoSetupCompiler` ile `ISCC.exe` yolunu belirtebilirsiniz.
 
 Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v<version>.exe`. Sürümü `-AppVersion` ile belirtebilirsiniz.
 
-Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. GitHub Actions imzalama için `WINDOWS_SIGNING_CERTIFICATE_BASE64` ve `WINDOWS_SIGNING_PASSWORD` depodaki Actions secrets olarak ayarlanmalıdır; sertifika hem uygulama EXE'sini hem kurulum EXE'sini imzalar.
+Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kurulum dosyaları kaldırmada silinir; uygulama dosyaları kullanımda veya salt okunursa silme yeniden başlatmaya ertelenir. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar. GitHub Actions hem uygulama EXE'sini hem kurulum EXE'sini imzalar ve self-signed sertifikanın açık anahtarını `.cer` olarak ekler. Self-signed imza Windows tarafından varsayılan olarak güvenilir sayılmaz; sertifikayı ayrıca güvenilir olarak yüklemek gerekir ve SmartScreen uyarısı yine görülebilir. CI her derlemede yeni, geçici bir sertifika üretir.
 
 Geliştirme sırasında uygulamayı depo kökünden çalıştırmak için:
 
