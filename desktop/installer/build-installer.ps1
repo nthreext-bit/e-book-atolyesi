@@ -18,6 +18,7 @@ $outputDirectory = Join-Path $installerDirectory 'dist'
 
 New-Item -ItemType Directory -Force -Path $prerequisiteDirectory, $outputDirectory | Out-Null
 
+try {
 $certificateBase64 = $env:WINDOWS_SIGNING_CERTIFICATE_BASE64
 $certificatePassword = $env:WINDOWS_SIGNING_PASSWORD
 $hasSigningCertificate = -not [string]::IsNullOrWhiteSpace($certificateBase64)
@@ -42,16 +43,19 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         $signTool = $signToolCommand.Source
     }
     else {
+        Write-Output 'Locating Windows SDK signtool.exe...'
         $windowsKitDirectory = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
-        $signTool = Get-ChildItem $windowsKitDirectory -Filter 'signtool.exe' -Recurse -ErrorAction Stop |
-            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
-            Sort-Object FullName -Descending |
-            Select-Object -ExpandProperty FullName -First 1
+        $signTool = Get-ChildItem $windowsKitDirectory -Directory -ErrorAction Stop |
+            Sort-Object Name -Descending |
+            ForEach-Object { Join-Path $_.FullName 'x64\signtool.exe' } |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
     }
     if ([string]::IsNullOrWhiteSpace($signTool)) {
         throw 'Windows SDK signtool.exe was not found.'
     }
     if ($SelfSignedSigning) {
+        Write-Output 'Creating temporary self-signed code-signing certificate...'
         $selfSignedCertificate = New-SelfSignedCertificate `
             -Type CodeSigningCert `
             -Subject 'CN=EPUB Atölyesi (Self-Signed)' `
@@ -65,6 +69,7 @@ if ($hasSigningCertificate -or $SelfSignedSigning) {
         Export-Certificate -Cert $selfSignedCertificate -FilePath $publicCertificatePath | Out-Null
         Import-Certificate -FilePath $publicCertificatePath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null
         $temporaryTrustInstalled = $true
+        Write-Output "Temporary signing certificate created: $($selfSignedCertificate.Thumbprint)"
     }
     elseif ($hasSigningCertificate) {
         [System.IO.File]::WriteAllBytes(
@@ -102,7 +107,6 @@ function Sign-Executable([string]$Path) {
     }
 }
 
-try {
 & dotnet publish $projectFile `
     --configuration Release `
     --runtime win-x64 `
