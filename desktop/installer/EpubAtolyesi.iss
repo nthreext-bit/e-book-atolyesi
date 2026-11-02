@@ -33,6 +33,9 @@ Name: "desktopicon"; Description: "Masaüstü kısayolu oluştur"; GroupDescript
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs uninsrestartdelete uninsremovereadonly
 Source: "{#WebView2Bootstrapper}"; Flags: dontcopy
 
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}\*"
+
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\EpubAtolyesi.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\EpubAtolyesi.exe"; WorkingDir: "{app}"; Tasks: desktopicon
