@@ -139,14 +139,14 @@
               <TabItem Header="{DynamicResource Tab.Projects}">
                 <DockPanel Margin="8">
                   <TextBlock DockPanel.Dock="Top" Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="3,4,3,8" />
-                  <TreeView SelectedItemChanged="Section_TreeSelectionChanged" PreviewMouseLeftButtonDown="SectionsTree_MouseDown" PreviewMouseMove="SectionsTree_PreviewMouseMove" DragOver="SectionsTree_DragOver" Drop="SectionsTree_Drop" AllowDrop="True" BorderThickness="0">
+                  <TreeView x:Name="SectionsTree" SelectedItemChanged="Section_TreeSelectionChanged" PreviewMouseLeftButtonDown="SectionsTree_MouseDown" PreviewMouseMove="SectionsTree_PreviewMouseMove" DragOver="SectionsTree_DragOver" Drop="SectionsTree_Drop" AllowDrop="True" BorderThickness="0">
                     <TreeView.Resources>
                       <Style TargetType="TreeViewItem">
                         <Setter Property="ContextMenu">
                           <Setter.Value>
                             <ContextMenu>
-                              <MenuItem Header="{DynamicResource Tree.Rename}" Click="RenameSection_Click" Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
-                              <MenuItem Header="{DynamicResource Tree.Delete}" Click="DeleteSection_Click" Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                              <MenuItem Header="{DynamicResource Tree.Rename}" Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                              <MenuItem Header="{DynamicResource Tree.Delete}" Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                             </ContextMenu>
                           </Setter.Value>
                         </Setter>

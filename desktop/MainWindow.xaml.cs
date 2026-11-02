@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AttachSectionContextMenuHandlers();
         DataContext = _viewModel;
         SourceEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("XML");
         LeftPanelToggle.Checked += LeftPanel_Changed;
@@ -329,6 +330,39 @@ public partial class MainWindow : Window
             _viewModel.RenameSection(section, title);
             _viewModel.OpenSection(section);
         }
+    }
+
+    private void SectionContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu { Items.Count: >= 2 } contextMenu ||
+            contextMenu.Items[0] is not MenuItem renameItem ||
+            contextMenu.Items[1] is not MenuItem deleteItem)
+        {
+            return;
+        }
+
+        renameItem.Click -= RenameSection_Click;
+        renameItem.Click += RenameSection_Click;
+        deleteItem.Click -= DeleteSection_Click;
+        deleteItem.Click += DeleteSection_Click;
+    }
+
+    private void AttachSectionContextMenuHandlers()
+    {
+        if (SectionsTree.Resources[typeof(TreeViewItem)] is not Style treeItemStyle)
+        {
+            throw new InvalidOperationException("The section tree item style was not found.");
+        }
+
+        var contextMenuSetter = treeItemStyle.Setters
+            .OfType<Setter>()
+            .FirstOrDefault(setter => setter.Property == FrameworkElement.ContextMenuProperty);
+        if (contextMenuSetter?.Value is not ContextMenu contextMenu)
+        {
+            throw new InvalidOperationException("The section tree context menu was not found.");
+        }
+
+        contextMenu.Opened += SectionContextMenu_Opened;
     }
 
     private void DeleteSection_Click(object sender, RoutedEventArgs e)
