@@ -76,6 +76,18 @@ public static class EditorDocument
                 document.head.appendChild(link);
               }
             }
+            function undoEditorContent() {
+              const before = serializeContent();
+              page.focus();
+              document.execCommand('undo');
+              return before !== serializeContent();
+            }
+            function redoEditorContent() {
+              const before = serializeContent();
+              page.focus();
+              document.execCommand('redo');
+              return before !== serializeContent();
+            }
             function formatText(command, value) { page.focus(); document.execCommand(command, false, value || null); }
             function pasteText(text, mode, isHtml) {
               page.focus();
@@ -235,6 +247,7 @@ public static class EditorDocument
             }
             page.addEventListener('input', () => {
               clearTimeout(inputTimer);
+              if (currentSectionId) chrome.webview.postMessage(JSON.stringify({ type: 'editing', sectionId: currentSectionId }));
               inputTimer = setTimeout(flushContent, 120);
             });
             document.addEventListener('selectionchange', sendInspector);

@@ -797,13 +797,20 @@ public partial class EditorViewModel : ObservableObject, IDisposable
     {
         if (_book is null) throw new InvalidOperationException("Önce bir EPUB açın.");
         await EnsureSectionLoadedAsync(section);
-        var newSection = _packageService.SplitSection(_book, section, firstContent, secondContent);
-        var sectionIndex = Sections.IndexOf(section);
-        Sections.Insert(sectionIndex + 1, newSection);
-        OpenSections.Add(newSection);
-        Resources.Add(_book.Resources.First(resource => resource.Id == newSection.Id));
-        NotifyDocumentStateChanged();
-        return newSection;
+        EpubSection? newSection = null;
+        var book = _book;
+        var operation = new StructuralBookEditOperation(this, Strings.Get("Book.SplitSection"), targetBook =>
+        {
+            newSection = _packageService.SplitSection(targetBook, section, firstContent, secondContent);
+            var sectionIndex = Sections.IndexOf(section);
+            Sections.Insert(sectionIndex + 1, newSection);
+            OpenSections.Add(newSection);
+            SetResources(targetBook.Resources);
+            RefreshTableOfContents(targetBook);
+        });
+        await book.EditHistory.ExecuteAsync(book, operation);
+        NotifyBookEditHistoryChanged();
+        return newSection ?? throw new InvalidOperationException("Bölüm ayırma işlemi yeni bölüm oluşturmadı.");
     }
 
     public async Task MergeWithNextSectionAsync(EpubSection section)
@@ -815,14 +822,238 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         var next = Sections[index + 1];
         await EnsureSectionLoadedAsync(section);
         await EnsureSectionLoadedAsync(next);
-        _packageService.MergeSections(_book, section, next);
-        Sections.Remove(next);
-        OpenSections.Remove(next);
-        Resources.Remove(_book.Resources.FirstOrDefault(resource => resource.Id == next.Id)!);
-        if (ReferenceEquals(CurrentSection, next)) CurrentSection = section;
+        var book = _book;
+        var operation = new StructuralBookEditOperation(this, Strings.Get("Book.MergeSection"), targetBook =>
+        {
+            _packageService.MergeSections(targetBook, section, next);
+            Sections.Remove(next);
+            OpenSections.Remove(next);
+            SetResources(targetBook.Resources);
+            RefreshTableOfContents(targetBook);
+            if (ReferenceEquals(CurrentSection, next)) CurrentSection = section;
+        });
+        await book.EditHistory.ExecuteAsync(book, operation);
+        NotifyBookEditHistoryChanged();
+    }
+
+    private void RefreshTableOfContents(EpubBook book)
+    {
         TableOfContents.Clear();
-        foreach (var entry in _book.TableOfContents) TableOfContents.Add(entry);
-        NotifyDocumentStateChanged();
+        foreach (var entry in book.TableOfContents)
+            TableOfContents.Add(entry);
+    }
+
+    private sealed class StructuralBookEditOperation(
+        EditorViewModel viewModel,
+        string description,
+        Action<EpubBook> apply) : IBookEditOperation
+    {
+        private StructureSnapshot? _before;
+
+        public string Description { get; } = description;
+
+        public async Task ApplyAsync(EpubBook book, CancellationToken cancellationToken)
+        {
+            var snapshot = await StructureSnapshot.CaptureAsync(book, viewModel, cancellationToken);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                apply(book);
+                _before = snapshot;
+                viewModel.NotifyDocumentStateChanged();
+            }
+            catch (Exception applyException)
+            {
+                try
+                {
+                    await snapshot.RestoreAsync(book, viewModel);
+                }
+                catch (Exception rollbackException)
+                {
+                    throw new AggregateException(
+                        "The structural edit failed and its previous state could not be fully restored.",
+                        applyException,
+                        rollbackException);
+                }
+
+                throw;
+            }
+        }
+
+        public async Task UndoAsync(EpubBook book, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var snapshot = _before
+                ?? throw new InvalidOperationException("The structural edit has not been applied.");
+            await snapshot.RestoreAsync(book, viewModel);
+            _before = null;
+            viewModel.NotifyDocumentStateChanged();
+        }
+
+        private sealed class StructureSnapshot
+        {
+            private readonly EpubSection[] _bookSections;
+            private readonly EpubSection[] _viewSections;
+            private readonly EpubSection[] _openSections;
+            private readonly EpubSection? _currentSection;
+            private readonly SectionState[] _sectionStates;
+            private readonly EpubResource[] _resources;
+            private readonly EpubTocEntry[] _bookTableOfContents;
+            private readonly EpubTocEntry[] _viewTableOfContents;
+            private readonly FileState[] _files;
+            private readonly bool _packageDirty;
+
+            private StructureSnapshot(
+                EpubBook book,
+                EditorViewModel viewModel,
+                SectionState[] sectionStates,
+                FileState[] files)
+            {
+                _bookSections = book.Sections.ToArray();
+                _viewSections = viewModel.Sections.ToArray();
+                _openSections = viewModel.OpenSections.ToArray();
+                _currentSection = viewModel.CurrentSection;
+                _sectionStates = sectionStates;
+                _resources = book.Resources.ToArray();
+                _bookTableOfContents = CopyEntries(book.TableOfContents);
+                _viewTableOfContents = CopyEntries(viewModel.TableOfContents);
+                _files = files;
+                _packageDirty = book.IsPackageDirty;
+            }
+
+            public static async Task<StructureSnapshot> CaptureAsync(
+                EpubBook book,
+                EditorViewModel viewModel,
+                CancellationToken cancellationToken)
+            {
+                var sections = book.Sections.ToArray();
+                var sectionStates = sections.Select(section => new SectionState(
+                    section,
+                    section.Title,
+                    section.ContentXhtml,
+                    section.RawDocumentXhtml,
+                    section.WordCount,
+                    section.WordCountKnown,
+                    section.IsLoaded,
+                    section.IsDirty)).ToArray();
+                var paths = sections.Select(section => section.FilePath)
+                    .Concat(book.Resources
+                        .Where(resource => resource.IsNavigation)
+                        .Select(resource => resource.FullPath))
+                    .Append(Path.Combine(book.WorkingDirectory, book.PackageRelativePath))
+                    .Select(path => NormalizeBookPath(book.WorkingDirectory, path))
+                    .Distinct(PathComparer)
+                    .ToArray();
+                var files = new List<FileState>(paths.Length);
+                foreach (var path in paths)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    files.Add(new FileState(path, File.Exists(path)
+                        ? await File.ReadAllBytesAsync(path, cancellationToken)
+                        : null));
+                }
+
+                return new StructureSnapshot(book, viewModel, sectionStates, [.. files]);
+            }
+
+            public async Task RestoreAsync(EpubBook book, EditorViewModel viewModel)
+            {
+                var originalSectionPaths = _bookSections
+                    .Select(section => NormalizeBookPath(book.WorkingDirectory, section.FilePath))
+                    .ToHashSet(PathComparer);
+                foreach (var path in book.Sections
+                    .Select(section => NormalizeBookPath(book.WorkingDirectory, section.FilePath))
+                    .Distinct(PathComparer))
+                {
+                    if (!originalSectionPaths.Contains(path) && File.Exists(path))
+                        File.Delete(path);
+                }
+
+                foreach (var file in _files)
+                {
+                    if (file.Content is null)
+                    {
+                        if (File.Exists(file.Path))
+                            File.Delete(file.Path);
+                        continue;
+                    }
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(file.Path)!);
+                    await File.WriteAllBytesAsync(file.Path, file.Content);
+                }
+
+                foreach (var state in _sectionStates)
+                {
+                    state.Section.Title = state.Title;
+                    state.Section.ContentXhtml = state.ContentXhtml;
+                    state.Section.RawDocumentXhtml = state.RawDocumentXhtml;
+                    state.Section.WordCount = state.WordCount;
+                    state.Section.WordCountKnown = state.WordCountKnown;
+                    state.Section.IsLoaded = state.IsLoaded;
+                    state.Section.IsDirty = state.IsDirty;
+                }
+
+                book.Sections.Clear();
+                book.Sections.AddRange(_bookSections);
+                book.Resources.Clear();
+                book.Resources.AddRange(_resources);
+                book.TableOfContents.Clear();
+                book.TableOfContents.AddRange(CopyEntries(_bookTableOfContents));
+                book.IsPackageDirty = _packageDirty;
+
+                viewModel.Sections.Clear();
+                foreach (var section in _viewSections)
+                    viewModel.Sections.Add(section);
+                viewModel.OpenSections.Clear();
+                foreach (var section in _openSections)
+                    viewModel.OpenSections.Add(section);
+                viewModel.SetResources(book.Resources);
+                viewModel.TableOfContents.Clear();
+                foreach (var entry in CopyEntries(_viewTableOfContents))
+                    viewModel.TableOfContents.Add(entry);
+                viewModel.CurrentSection = _currentSection;
+                viewModel.NotifyDocumentStateChanged();
+            }
+
+            private static EpubTocEntry[] CopyEntries(IEnumerable<EpubTocEntry> entries) =>
+                entries.Select(entry => new EpubTocEntry
+                {
+                    SectionId = entry.SectionId,
+                    Href = entry.Href,
+                    Title = entry.Title,
+                    Level = entry.Level
+                }).ToArray();
+
+            private static string NormalizeBookPath(string workingDirectory, string path)
+            {
+                var root = Path.GetFullPath(workingDirectory);
+                var fullPath = Path.GetFullPath(path);
+                var rootPrefix = Path.EndsInDirectorySeparator(root)
+                    ? root
+                    : root + Path.DirectorySeparatorChar;
+                var comparison = OperatingSystem.IsWindows()
+                    ? StringComparison.OrdinalIgnoreCase
+                    : StringComparison.Ordinal;
+                if (!fullPath.StartsWith(rootPrefix, comparison))
+                    throw new InvalidDataException("A structural edit path is outside the book working directory.");
+                return fullPath;
+            }
+
+            private static StringComparer PathComparer =>
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+            private sealed record SectionState(
+                EpubSection Section,
+                string Title,
+                string ContentXhtml,
+                string? RawDocumentXhtml,
+                int WordCount,
+                bool WordCountKnown,
+                bool IsLoaded,
+                bool IsDirty);
+
+            private sealed record FileState(string Path, byte[]? Content);
+        }
     }
 
     private static bool IsNavigationResource(EpubResource resource) => resource.IsNavigation;

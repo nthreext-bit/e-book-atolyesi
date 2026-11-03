@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Navigation;
+using System.Windows.Media.Imaging;
 using KitaplikEditoru.Core;
 using KitaplikEditoru.Editor;
 using KitaplikEditoru.Infrastructure;
@@ -34,6 +35,8 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private bool _closePromptOpen;
     private bool _recoverySnapshotInProgress;
+    private bool _bookHistoryUndoPreferred;
+    private bool _bookHistoryRedoPreferred;
     private Task? _recoverySnapshotTask;
     private bool _sourceMode;
     private bool _rawDocumentMode;
@@ -144,8 +147,6 @@ public partial class MainWindow : Window
                 .Replace("__START_WRITING__", JsonSerializer.Serialize(Strings.Get("Editor.StartTyping")), StringComparison.Ordinal)
                 .Replace("__LINK_PROMPT__", JsonSerializer.Serialize(Strings.Get("Tools.LinkPrompt")), StringComparison.Ordinal);
             EditorWebView.NavigateToString(editorHtml);
-            _webViewReady = true;
-            await EditorWebView.ExecuteScriptAsync($"setTheme({(_viewModel.DarkTheme ? "true" : "false")});");
             UpdateEditorVisibility();
             try
             {
@@ -232,10 +233,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void EditorWebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    private async void EditorWebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
         _webViewReady = e.IsSuccess;
-        _ = LoadCurrentSectionAsync();
+        UpdateEditorVisibility();
+        if (!e.IsSuccess)
+        {
+            var exception = new InvalidOperationException($"Editor WebView2 navigation failed: {e.WebErrorStatus}.");
+            AppLogger.Write(exception, "Editor WebView2 navigation failed");
+            _viewModel.StatusMessage = Strings.Format("Tools.FeatureError", e.WebErrorStatus);
+            return;
+        }
+
+        try
+        {
+            await EditorWebView.ExecuteScriptAsync($"setTheme({(_viewModel.DarkTheme ? "true" : "false")});");
+            await LoadCurrentSectionAsync();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Editor WebView2 initialization failed");
+        }
     }
 
     private async Task LoadCurrentSectionAsync()
@@ -363,6 +381,12 @@ public partial class MainWindow : Window
                     message.RootElement.GetProperty("sectionId").GetString() ?? string.Empty,
                     message.RootElement.GetProperty("content").GetString() ?? string.Empty);
             }
+            else if (type == "editing" &&
+                     message.RootElement.GetProperty("sectionId").GetString() == _viewModel.CurrentSection?.Id)
+            {
+                _bookHistoryUndoPreferred = false;
+                _bookHistoryRedoPreferred = false;
+            }
             else if (type == "save")
             {
                 await SaveDocumentAsync();
@@ -384,6 +408,11 @@ public partial class MainWindow : Window
     private void UpdateEditorVisibility()
     {
         var hasSection = _viewModel.CurrentSection is not null;
+        SourceModeButton.IsEnabled = hasSection && !_issueFilePreview && _editingStylesheet is null;
+        var canValidate = _viewModel.HasBook && _issueOperationCancellation is null;
+        ValidateBookMenuItem.IsEnabled = canValidate;
+        ValidateBookButton.IsEnabled = canValidate;
+        ValidateControlButton.IsEnabled = canValidate;
         EditorWebView.Visibility = _webViewReady && hasSection && !_sourceMode && !_issueFilePreview && _editingStylesheet is null
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -420,18 +449,15 @@ public partial class MainWindow : Window
 
     private void RefreshCoverPreview(EpubResource? resource = null)
     {
-        if (!_coverPreviewReady)
-        {
-            return;
-        }
+        CoverPreviewImage.Source = null;
+        CoverPreviewImage.Visibility = Visibility.Collapsed;
+        CoverPreviewWebView.Visibility = Visibility.Collapsed;
 
         try
         {
             if (resource is null)
             {
-                var placeholder = System.Net.WebUtility.HtmlEncode(Strings.Get("Cover.NoSelection"));
-                CoverPreviewWebView.CoreWebView2.NavigateToString(
-                    $"<!doctype html><html><meta charset=\"utf-8\"><body style=\"font:14px sans-serif;color:#667085;text-align:center;padding:2em\">{placeholder}</body></html>");
+                CoverPreviewPlaceholder.Visibility = Visibility.Visible;
                 return;
             }
 
@@ -448,6 +474,36 @@ public partial class MainWindow : Window
             {
                 throw new FileNotFoundException("Kapak resmi EPUB çalışma klasöründe bulunamadı.", imagePath);
             }
+            CoverPreviewPlaceholder.Visibility = Visibility.Collapsed;
+
+            var extension = Path.GetExtension(imagePath);
+            if (extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".gif", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".bmp", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".tif", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".tiff", StringComparison.OrdinalIgnoreCase))
+            {
+                using var imageStream = File.OpenRead(imagePath);
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.DecodePixelWidth = 1600;
+                bitmap.StreamSource = imageStream;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                CoverPreviewImage.Source = bitmap;
+                CoverPreviewImage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (!_coverPreviewReady)
+            {
+                CoverPreviewPlaceholder.Visibility = Visibility.Visible;
+                return;
+            }
+
             if (!string.Equals(_coverPreviewWorkingDirectory, workingDirectory, StringComparison.OrdinalIgnoreCase))
             {
                 if (_coverPreviewWorkingDirectory is not null)
@@ -472,9 +528,18 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            CoverPreviewPlaceholder.Visibility = Visibility.Visible;
             ShowFeatureError(exception, $"Cover preview failed: {resource?.Href ?? "(no selection)"}");
         }
     }
+
+    private void ScrollSectionTabsLeft_Click(object sender, RoutedEventArgs e) =>
+        SectionTabsScrollViewer.ScrollToHorizontalOffset(
+            Math.Max(0, SectionTabsScrollViewer.HorizontalOffset - SectionTabsScrollViewer.ViewportWidth * 0.75));
+
+    private void ScrollSectionTabsRight_Click(object sender, RoutedEventArgs e) =>
+        SectionTabsScrollViewer.ScrollToHorizontalOffset(
+            SectionTabsScrollViewer.HorizontalOffset + SectionTabsScrollViewer.ViewportWidth * 0.75);
 
     private void SetSelectedCover_Click(object sender, RoutedEventArgs e)
     {
@@ -1139,8 +1204,97 @@ public partial class MainWindow : Window
     }
 
     private async void Link_Click(object sender, RoutedEventArgs e) => await ExecuteEditorScriptAsync("insertLink();");
-    private async void Undo_Click(object sender, RoutedEventArgs e) => await ExecuteEditorScriptAsync("formatText('undo');");
-    private async void Redo_Click(object sender, RoutedEventArgs e) => await ExecuteEditorScriptAsync("formatText('redo');");
+
+    private async void Undo_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_bookHistoryUndoPreferred && _viewModel.CanUndoBookEdit)
+            {
+                await CaptureEditorContentAsync();
+                if (await _viewModel.UndoBookEditAsync())
+                {
+                    _bookHistoryUndoPreferred = false;
+                    _bookHistoryRedoPreferred = true;
+                    await LoadCurrentSectionAsync();
+                    return;
+                }
+            }
+
+            if (_sourceMode && SourceEditor.Document.UndoStack.CanUndo)
+            {
+                SourceEditor.Undo();
+                return;
+            }
+
+            if (_webViewReady && await TryUndoEditorContentAsync("undoEditorContent();"))
+            {
+                await CaptureEditorContentAsync();
+                return;
+            }
+
+            await CaptureEditorContentAsync();
+            if (await _viewModel.UndoBookEditAsync())
+            {
+                _bookHistoryUndoPreferred = false;
+                _bookHistoryRedoPreferred = true;
+                await LoadCurrentSectionAsync();
+            }
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Undo failed");
+        }
+    }
+
+    private async void Redo_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_bookHistoryRedoPreferred && _viewModel.CanRedoBookEdit)
+            {
+                await CaptureEditorContentAsync();
+                if (await _viewModel.RedoBookEditAsync())
+                {
+                    _bookHistoryUndoPreferred = true;
+                    _bookHistoryRedoPreferred = false;
+                    await LoadCurrentSectionAsync();
+                    return;
+                }
+            }
+
+            if (_sourceMode && SourceEditor.Document.UndoStack.CanRedo)
+            {
+                SourceEditor.Redo();
+                return;
+            }
+
+            if (_webViewReady && await TryUndoEditorContentAsync("redoEditorContent();"))
+            {
+                await CaptureEditorContentAsync();
+                return;
+            }
+
+            await CaptureEditorContentAsync();
+            if (await _viewModel.RedoBookEditAsync())
+            {
+                _bookHistoryUndoPreferred = true;
+                _bookHistoryRedoPreferred = false;
+                await LoadCurrentSectionAsync();
+            }
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Redo failed");
+        }
+    }
+
+    private async Task<bool> TryUndoEditorContentAsync(string script)
+    {
+        var result = await EditorWebView.ExecuteScriptAsync(script);
+        return bool.TryParse(result, out var changed) && changed;
+    }
+
     private async void SelectAll_Click(object sender, RoutedEventArgs e) => await ExecuteEditorScriptAsync("formatText('selectAll');");
 
     private async void Table_Click(object sender, RoutedEventArgs e)
@@ -1299,6 +1453,12 @@ public partial class MainWindow : Window
 
     private void SourceEditor_TextChanged(object sender, EventArgs e)
     {
+        if (!_updatingSource)
+        {
+            _bookHistoryUndoPreferred = false;
+            _bookHistoryRedoPreferred = false;
+        }
+
         if (_editingStylesheet is not null && !_updatingSource)
         {
             try
@@ -1447,6 +1607,7 @@ public partial class MainWindow : Window
         CancelValidationButton.Visibility = Visibility.Visible;
         ValidateBookMenuItem.IsEnabled = false;
         ValidateBookButton.IsEnabled = false;
+        ValidateControlButton.IsEnabled = false;
         FixIssueButton.IsEnabled = false;
         FixAllIssuesButton.IsEnabled = false;
     }
@@ -1460,8 +1621,7 @@ public partial class MainWindow : Window
         ValidationStatusText.Visibility = Visibility.Collapsed;
         CancelValidationButton.Visibility = Visibility.Collapsed;
         CancelValidationButton.IsEnabled = true;
-        ValidateBookMenuItem.IsEnabled = true;
-        ValidateBookButton.IsEnabled = true;
+        UpdateEditorVisibility();
     }
 
     private void UpdateValidationProgress(EpubValidationProgress progress)
@@ -1917,6 +2077,8 @@ public partial class MainWindow : Window
             var after = json.RootElement.GetProperty("after").GetString() ?? string.Empty;
             var newSection = await _viewModel.SplitSectionAsync(_viewModel.CurrentSection, before, after);
             _viewModel.OpenSection(newSection);
+            _bookHistoryUndoPreferred = true;
+            _bookHistoryRedoPreferred = false;
         }
         catch (Exception exception)
         {
@@ -1932,6 +2094,8 @@ public partial class MainWindow : Window
         {
             await _viewModel.MergeWithNextSectionAsync(_viewModel.CurrentSection);
             await LoadCurrentSectionAsync();
+            _bookHistoryUndoPreferred = true;
+            _bookHistoryRedoPreferred = false;
         }
         catch (Exception exception)
         {
@@ -2172,6 +2336,16 @@ public partial class MainWindow : Window
         {
             e.Handled = true;
             await SaveDocumentAsync();
+        }
+        else if (e.Key == Key.Z)
+        {
+            e.Handled = true;
+            Undo_Click(this, new RoutedEventArgs());
+        }
+        else if (e.Key == Key.Y)
+        {
+            e.Handled = true;
+            Redo_Click(this, new RoutedEventArgs());
         }
         else if (e.Key == Key.F)
         {

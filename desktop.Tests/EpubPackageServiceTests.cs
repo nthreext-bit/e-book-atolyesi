@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using KitaplikEditoru.Core;
+using KitaplikEditoru.ViewModels;
 using Xunit;
 
 namespace EpubStudio.Tests;
@@ -73,6 +74,71 @@ public sealed class EpubPackageServiceTests
         {
             File.Delete(fixturePath);
             File.Delete(outputPath);
+        }
+    }
+
+    [Fact]
+    public async Task SplitSectionCanBeUndoneAndRedone()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0");
+        using var viewModel = new EditorViewModel();
+
+        try
+        {
+            await viewModel.OpenAsync(fixturePath);
+            var section = Assert.Single(viewModel.Sections);
+            await viewModel.EnsureSectionLoadedAsync(section);
+            var originalContent = section.ContentXhtml;
+
+            await viewModel.SplitSectionAsync(section, "<p>First half</p>", "<p>Second half</p>");
+            Assert.Equal(2, viewModel.Sections.Count);
+
+            Assert.True(await viewModel.UndoBookEditAsync());
+            Assert.Single(viewModel.Sections);
+            Assert.Equal(originalContent, viewModel.Sections[0].ContentXhtml);
+
+            Assert.True(await viewModel.RedoBookEditAsync());
+            Assert.Equal(2, viewModel.Sections.Count);
+            Assert.Contains("First half", viewModel.Sections[0].ContentXhtml);
+            Assert.Contains("Second half", viewModel.Sections[1].ContentXhtml);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
+    public async Task MergeSectionCanBeUndoneAndRedone()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0", includeSecondSection: true);
+        using var viewModel = new EditorViewModel();
+
+        try
+        {
+            await viewModel.OpenAsync(fixturePath);
+            var first = viewModel.Sections[0];
+            var second = viewModel.Sections[1];
+            await viewModel.EnsureSectionLoadedAsync(first);
+            await viewModel.EnsureSectionLoadedAsync(second);
+            var secondFile = second.FilePath;
+
+            await viewModel.MergeWithNextSectionAsync(first);
+            Assert.Single(viewModel.Sections);
+            Assert.False(File.Exists(secondFile));
+
+            Assert.True(await viewModel.UndoBookEditAsync());
+            Assert.Equal(2, viewModel.Sections.Count);
+            Assert.Same(second, viewModel.Sections[1]);
+            Assert.True(File.Exists(secondFile));
+
+            Assert.True(await viewModel.RedoBookEditAsync());
+            Assert.Single(viewModel.Sections);
+            Assert.False(File.Exists(secondFile));
+        }
+        finally
+        {
+            File.Delete(fixturePath);
         }
     }
 

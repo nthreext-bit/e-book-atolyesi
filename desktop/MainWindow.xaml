@@ -10,10 +10,10 @@
         AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver" PreviewKeyDown="Window_PreviewKeyDown">
   <Window.Resources>
     <Style x:Key="RibbonToolButton" TargetType="Button">
-      <Setter Property="Width" Value="76" />
+      <Setter Property="Width" Value="58" />
       <Setter Property="Height" Value="58" />
-      <Setter Property="Margin" Value="2" />
-      <Setter Property="Padding" Value="4" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Padding" Value="2" />
       <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -26,9 +26,9 @@
                     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
               <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(ui:IconGlyph.Glyph)}"
-                           FontFamily="Segoe MDL2 Assets" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,3" />
+                           FontFamily="Segoe MDL2 Assets" FontSize="18" HorizontalAlignment="Center" Margin="0,0,0,2" />
                 <TextBlock Text="{TemplateBinding Content}" TextAlignment="Center" TextWrapping="Wrap"
-                           FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                           FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" />
               </StackPanel>
             </Border>
             <ControlTemplate.Triggers>
@@ -52,15 +52,21 @@
       <Setter Property="Height" Value="58" />
       <Setter Property="Margin" Value="2" />
     </Style>
-    <Style x:Key="RibbonGroup" TargetType="StackPanel">
-      <Setter Property="Margin" Value="4,2" />
-      <Setter Property="Background" Value="{StaticResource PanelBackground}" />
-    </Style>
     <Style x:Key="GlyphMenuItem" TargetType="MenuItem">
-      <Setter Property="Icon">
+      <Setter Property="Padding" Value="4,2" />
+    </Style>
+    <Style x:Key="SourceModeToggleButton" TargetType="Button">
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="ContentTemplate">
         <Setter.Value>
-          <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="14"
-                     Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=(ui:IconGlyph.Glyph)}" />
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type Button}}, Path=(ui:IconGlyph.Glyph)}"
+                         FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+              <TextBlock Text="{Binding}" />
+            </StackPanel>
+          </DataTemplate>
         </Setter.Value>
       </Setter>
     </Style>
@@ -98,12 +104,12 @@
         <MenuItem Header="{DynamicResource Format.Strike}" Click="Format_Click" Tag="strikeThrough" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xEDE0;" />
         <Separator />
         <MenuItem Header="{DynamicResource Format.Paragraph}" Click="Block_Click" Tag="p" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
-        <MenuItem Header="{DynamicResource Format.Heading1}" Click="Block_Click" Tag="h1" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
-        <MenuItem Header="{DynamicResource Format.Heading2}" Click="Block_Click" Tag="h2" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
-        <MenuItem Header="{DynamicResource Format.Heading3}" Click="Block_Click" Tag="h3" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
-        <MenuItem Header="{DynamicResource Format.Heading4}" Click="Block_Click" Tag="h4" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
-        <MenuItem Header="{DynamicResource Format.Heading5}" Click="Block_Click" Tag="h5" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
-        <MenuItem Header="{DynamicResource Format.Heading6}" Click="Block_Click" Tag="h6" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
+        <MenuItem Header="{DynamicResource Format.Heading1}" Click="Block_Click" Tag="h1" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
+        <MenuItem Header="{DynamicResource Format.Heading2}" Click="Block_Click" Tag="h2" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
+        <MenuItem Header="{DynamicResource Format.Heading3}" Click="Block_Click" Tag="h3" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
+        <MenuItem Header="{DynamicResource Format.Heading4}" Click="Block_Click" Tag="h4" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
+        <MenuItem Header="{DynamicResource Format.Heading5}" Click="Block_Click" Tag="h5" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
+        <MenuItem Header="{DynamicResource Format.Heading6}" Click="Block_Click" Tag="h6" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
         <MenuItem Header="{DynamicResource Format.Quote}" Click="Block_Click" Tag="blockquote" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
         <Separator />
         <MenuItem Header="{DynamicResource Format.Superscript}" Click="Format_Click" Tag="superscript" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D2;" />
@@ -137,7 +143,7 @@
         <MenuItem Header="{DynamicResource Book.OpenCoverEditor}" Click="OpenCoverEditor_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE91B;" />
         <MenuItem Header="{DynamicResource Book.GenerateToc}" Click="GenerateToc_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8EF;" />
         <MenuItem Header="{DynamicResource Book.OpenTocEditor}" Click="OpenTocEditor_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8EF;" />
-        <MenuItem Header="{DynamicResource Book.SplitSection}" Click="SplitSection_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
+        <MenuItem Header="{DynamicResource Book.SplitSection}" Click="SplitSection_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D6;" />
         <MenuItem Header="{DynamicResource Book.MergeSection}" Click="MergeSection_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8D7;" />
         <Separator />
         <MenuItem x:Name="ValidateBookMenuItem" Header="{DynamicResource Book.Validate}" Click="ValidateBook_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE930;" />
@@ -153,119 +159,74 @@
         <MenuItem Header="{DynamicResource View.DarkTheme}" IsCheckable="True" IsChecked="{Binding DarkTheme, Mode=TwoWay}" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE708;" />
         <MenuItem Header="{DynamicResource View.ReaderPreview}" Click="ReaderPreview_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE8A5;" />
       </MenuItem>
-      <MenuItem Header="{DynamicResource Menu.Help}" Click="Help_Click" Style="{StaticResource GlyphMenuItem}" ui:IconGlyph.Glyph="&#xE897;" />
+      <MenuItem Header="{DynamicResource Menu.Help}" Click="Help_Click" Style="{StaticResource GlyphMenuItem}" />
     </Menu>
 
     <Border DockPanel.Dock="Top" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="0,0,0,1" Padding="5,2">
-      <TabControl MinHeight="122" MaxHeight="132">
+      <TabControl MinHeight="82" MaxHeight="92">
         <TabItem Header="{DynamicResource Ribbon.Home}">
-          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-            <StackPanel Orientation="Horizontal">
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Command="{Binding CreateNewCommand}" ui:IconGlyph.Glyph="&#xE710;" Content="{DynamicResource Toolbar.New}" ToolTip="{DynamicResource File.New}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Command="{Binding OpenEpubCommand}" ui:IconGlyph.Glyph="&#xE8E5;" Content="{DynamicResource Toolbar.Open}" ToolTip="{DynamicResource File.Open}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Save_Click" ui:IconGlyph.Glyph="&#xE74E;" Content="{DynamicResource Toolbar.Save}" ToolTip="{DynamicResource File.Save}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Undo_Click" ui:IconGlyph.Glyph="&#xE7A7;" Content="{DynamicResource Action.Undo}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Redo_Click" ui:IconGlyph.Glyph="&#xE7A6;" Content="{DynamicResource Action.Redo}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Clipboard}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <Separator Margin="3,7" />
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="bold" ui:IconGlyph.Glyph="&#xE8DD;" Content="{DynamicResource Format.Bold}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="italic" ui:IconGlyph.Glyph="&#xE8DB;" Content="{DynamicResource Format.Italic}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="underline" ui:IconGlyph.Glyph="&#xE8DC;" Content="{DynamicResource Format.Underline}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="strikeThrough" ui:IconGlyph.Glyph="&#xEDE0;" Content="{DynamicResource Format.Strike}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Block_Click" Tag="h1" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading1}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Block_Click" Tag="blockquote" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Quote}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Formatting}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <Separator Margin="3,7" />
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="insertUnorderedList" ui:IconGlyph.Glyph="&#xE8FD;" Content="{DynamicResource Format.Bullets}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="insertOrderedList" ui:IconGlyph.Glyph="&#xE8F0;" Content="{DynamicResource Format.Numbering}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyLeft" ui:IconGlyph.Glyph="&#xE8E4;" Content="{DynamicResource Format.Left}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyCenter" ui:IconGlyph.Glyph="&#xE8E3;" Content="{DynamicResource Format.Center}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyRight" ui:IconGlyph.Glyph="&#xE8E2;" Content="{DynamicResource Format.Right}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyFull" ui:IconGlyph.Glyph="&#xE8E1;" Content="{DynamicResource Format.Justify}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Paragraph}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <Separator Margin="3,7" />
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="PreviousSection_Click" ui:IconGlyph.Glyph="&#xE72B;" Content="{DynamicResource Toolbar.Previous}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="NextSection_Click" ui:IconGlyph.Glyph="&#xE72A;" Content="{DynamicResource Toolbar.Next}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Search_Click" ui:IconGlyph.Glyph="&#xE721;" Content="{DynamicResource Tools.Find}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Replace_Click" ui:IconGlyph.Glyph="&#xE8D4;" Content="{DynamicResource Tools.Replace}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Navigation}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <TextBox x:Name="SearchTextBox" Width="160" Margin="8,18,4,24" VerticalContentAlignment="Center" ToolTip="{DynamicResource Toolbar.Search}" KeyDown="SearchTextBox_KeyDown" />
-            </StackPanel>
-          </ScrollViewer>
+          <ToolBarTray IsLocked="True">
+            <ToolBar Background="Transparent" BorderThickness="0" Padding="0">
+              <Button Style="{StaticResource RibbonToolButton}" Command="{Binding CreateNewCommand}" ui:IconGlyph.Glyph="&#xE710;" Content="{DynamicResource Toolbar.New}" ToolTip="{DynamicResource File.New}" />
+              <Button Style="{StaticResource RibbonToolButton}" Command="{Binding OpenEpubCommand}" ui:IconGlyph.Glyph="&#xE8E5;" Content="{DynamicResource Toolbar.Open}" ToolTip="{DynamicResource File.Open}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Save_Click" ui:IconGlyph.Glyph="&#xE74E;" Content="{DynamicResource Toolbar.Save}" ToolTip="{DynamicResource File.Save}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Undo_Click" ui:IconGlyph.Glyph="&#xE7A7;" Content="{DynamicResource Action.Undo}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Redo_Click" ui:IconGlyph.Glyph="&#xE7A6;" Content="{DynamicResource Action.Redo}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="bold" ui:IconGlyph.Glyph="&#xE8DD;" Content="{DynamicResource Format.Bold}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="italic" ui:IconGlyph.Glyph="&#xE8DB;" Content="{DynamicResource Format.Italic}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="underline" ui:IconGlyph.Glyph="&#xE8DC;" Content="{DynamicResource Format.Underline}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="strikeThrough" ui:IconGlyph.Glyph="&#xEDE0;" Content="{DynamicResource Format.Strike}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Block_Click" Tag="h1" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading1}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Block_Click" Tag="blockquote" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Quote}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="insertUnorderedList" ui:IconGlyph.Glyph="&#xE8FD;" Content="{DynamicResource Format.Bullets}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="insertOrderedList" ui:IconGlyph.Glyph="&#xE8F0;" Content="{DynamicResource Format.Numbering}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyLeft" ui:IconGlyph.Glyph="&#xE8E4;" Content="{DynamicResource Format.Left}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyCenter" ui:IconGlyph.Glyph="&#xE8E3;" Content="{DynamicResource Format.Center}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyRight" ui:IconGlyph.Glyph="&#xE8E2;" Content="{DynamicResource Format.Right}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="justifyFull" ui:IconGlyph.Glyph="&#xE8E1;" Content="{DynamicResource Format.Justify}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="PreviousSection_Click" ui:IconGlyph.Glyph="&#xE72B;" Content="{DynamicResource Toolbar.Previous}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="NextSection_Click" ui:IconGlyph.Glyph="&#xE72A;" Content="{DynamicResource Toolbar.Next}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Search_Click" ui:IconGlyph.Glyph="&#xE721;" Content="{DynamicResource Tools.Find}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Replace_Click" ui:IconGlyph.Glyph="&#xE8D4;" Content="{DynamicResource Tools.Replace}" />
+              <TextBox x:Name="SearchTextBox" Width="140" Margin="4,8" VerticalContentAlignment="Center" ToolTip="{DynamicResource Toolbar.Search}" KeyDown="SearchTextBox_KeyDown" />
+            </ToolBar>
+          </ToolBarTray>
         </TabItem>
         <TabItem Header="{DynamicResource Ribbon.Insert}">
-          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-            <StackPanel Orientation="Horizontal">
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Image_Click" ui:IconGlyph.Glyph="&#xE91B;" Content="{DynamicResource Tools.Image}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Link_Click" ui:IconGlyph.Glyph="&#xE71B;" Content="{DynamicResource Tools.Link}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Table_Click" ui:IconGlyph.Glyph="&#xE80A;" Content="{DynamicResource Tools.Table}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="insertHorizontalRule" ui:IconGlyph.Glyph="&#xE9D9;" Content="{DynamicResource Tools.HorizontalRule}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Objects}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <Separator Margin="3,7" />
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Bookmark_Click" ui:IconGlyph.Glyph="&#xE734;" Content="{DynamicResource Tools.Bookmark}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="InternalLink_Click" ui:IconGlyph.Glyph="&#xE71B;" Content="{DynamicResource Tools.InternalLink}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="PageBreak_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Tools.PageBreak}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Footnote_Click" ui:IconGlyph.Glyph="&#xE82F;" Content="{DynamicResource Tools.Footnote}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.BookObjects}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-            </StackPanel>
-          </ScrollViewer>
+          <ToolBarTray IsLocked="True">
+            <ToolBar Background="Transparent" BorderThickness="0" Padding="0">
+              <Button Style="{StaticResource RibbonToolButton}" Click="Image_Click" ui:IconGlyph.Glyph="&#xE91B;" Content="{DynamicResource Tools.Image}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Link_Click" ui:IconGlyph.Glyph="&#xE71B;" Content="{DynamicResource Tools.Link}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Table_Click" ui:IconGlyph.Glyph="&#xE80A;" Content="{DynamicResource Tools.Table}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Format_Click" Tag="insertHorizontalRule" ui:IconGlyph.Glyph="&#xE9D9;" Content="{DynamicResource Tools.HorizontalRule}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Bookmark_Click" ui:IconGlyph.Glyph="&#xE734;" Content="{DynamicResource Tools.Bookmark}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="InternalLink_Click" ui:IconGlyph.Glyph="&#xE71B;" Content="{DynamicResource Tools.InternalLink}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="PageBreak_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Tools.PageBreak}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="Footnote_Click" ui:IconGlyph.Glyph="&#xE82F;" Content="{DynamicResource Tools.Footnote}" />
+            </ToolBar>
+          </ToolBarTray>
         </TabItem>
         <TabItem Header="{DynamicResource Ribbon.Document}">
-          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-            <StackPanel Orientation="Horizontal">
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="Metadata_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Book.Metadata}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="SetCover_Click" ui:IconGlyph.Glyph="&#xE91B;" Content="{DynamicResource Book.SetCover}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="GenerateToc_Click" ui:IconGlyph.Glyph="&#xE8EF;" Content="{DynamicResource Book.GenerateToc}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Book}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <Separator Margin="3,7" />
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button Style="{StaticResource RibbonToolButton}" Click="SplitSection_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Book.SplitSection}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="MergeSection_Click" ui:IconGlyph.Glyph="&#xE8D7;" Content="{DynamicResource Book.MergeSection}" />
-                  <Button x:Name="ValidateBookButton" Style="{StaticResource RibbonToolButton}" Click="ValidateBook_Click" ui:IconGlyph.Glyph="&#xE930;" Content="{DynamicResource Book.Validate}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="ImportSection_Click" ui:IconGlyph.Glyph="&#xE8B5;" Content="{DynamicResource Book.ImportSection}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="ExportSection_Click" ui:IconGlyph.Glyph="&#xE8B6;" Content="{DynamicResource Book.ExportSection}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.Section}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-              <Separator Margin="3,7" />
-              <StackPanel Style="{StaticResource RibbonGroup}">
-                <WrapPanel>
-                  <Button x:Name="SourceModeButton" Style="{StaticResource RibbonToolButton}" Click="SourceMode_Click" ui:IconGlyph.Glyph="&#xE943;" Content="{DynamicResource Editor.Source}" />
-                  <Button Style="{StaticResource RibbonToolButton}" Click="ReaderPreview_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource View.ReaderPreview}" />
-                </WrapPanel>
-                <TextBlock Text="{DynamicResource Ribbon.View}" HorizontalAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" />
-              </StackPanel>
-            </StackPanel>
-          </ScrollViewer>
+          <ToolBarTray IsLocked="True">
+            <ToolBar Background="Transparent" BorderThickness="0" Padding="0">
+              <Button Style="{StaticResource RibbonToolButton}" Click="Metadata_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Book.Metadata}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="SetCover_Click" ui:IconGlyph.Glyph="&#xE91B;" Content="{DynamicResource Book.SetCover}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="GenerateToc_Click" ui:IconGlyph.Glyph="&#xE8EF;" Content="{DynamicResource Book.GenerateToc}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="SplitSection_Click" ui:IconGlyph.Glyph="&#xE8D6;" Content="{DynamicResource Book.SplitSection}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="MergeSection_Click" ui:IconGlyph.Glyph="&#xE8D7;" Content="{DynamicResource Book.MergeSection}" />
+              <Button x:Name="ValidateBookButton" Style="{StaticResource RibbonToolButton}" Click="ValidateBook_Click" ui:IconGlyph.Glyph="&#xE930;" Content="{DynamicResource Book.Validate}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="ImportSection_Click" ui:IconGlyph.Glyph="&#xE8B5;" Content="{DynamicResource Book.ImportSection}" />
+              <Button Style="{StaticResource RibbonToolButton}" Click="ExportSection_Click" ui:IconGlyph.Glyph="&#xE8B6;" Content="{DynamicResource Book.ExportSection}" />
+              <Separator />
+              <Button Style="{StaticResource RibbonToolButton}" Click="ReaderPreview_Click" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource View.ReaderPreview}" />
+            </ToolBar>
+          </ToolBarTray>
         </TabItem>
       </TabControl>
     </Border>
@@ -344,7 +305,13 @@
                   </StackPanel>
                   <Border Background="{StaticResource WindowBackground}" BorderBrush="{StaticResource PanelBorder}"
                           BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,8,0,0">
-                    <wv2:WebView2 x:Name="CoverPreviewWebView" />
+                    <Grid>
+                      <TextBlock x:Name="CoverPreviewPlaceholder" Text="{DynamicResource Cover.NoSelection}"
+                                 Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+                      <Image x:Name="CoverPreviewImage" Stretch="Uniform" Visibility="Collapsed" />
+                      <wv2:WebView2 x:Name="CoverPreviewWebView" Visibility="Collapsed" />
+                    </Grid>
                   </Border>
                 </DockPanel>
               </TabItem>
@@ -373,7 +340,7 @@
           <DockPanel>
             <TextBlock DockPanel.Dock="Top" Text="{DynamicResource Panel.Control}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="12,10" />
             <TabControl>
-              <TabItem Header="{DynamicResource Tab.Build}"><StackPanel Margin="10"><TextBlock Text="EPUB" FontWeight="SemiBold" Margin="3"/><Button Content="{DynamicResource Control.Save}" Click="Save_Click"/><Button Content="{DynamicResource Control.Check}" IsEnabled="False"/><Button Content="{DynamicResource Control.Launch}" IsEnabled="False"/></StackPanel></TabItem>
+              <TabItem Header="{DynamicResource Tab.Build}"><StackPanel Margin="10"><TextBlock Text="EPUB" FontWeight="SemiBold" Margin="3"/><Button x:Name="ValidateControlButton" Content="{DynamicResource Control.Check}" Click="ValidateBook_Click" IsEnabled="False"/><Button Content="{DynamicResource Control.Launch}" IsEnabled="False"/></StackPanel></TabItem>
               <TabItem Header="{DynamicResource Tab.Files}"><ListBox ItemsSource="{Binding Resources}" DisplayMemberPath="DisplayName" BorderThickness="0" /></TabItem>
               <TabItem Header="{DynamicResource Tab.Results}">
                 <ListBox ItemsSource="{Binding SearchResults}" SelectionChanged="SearchResults_SelectionChanged" BorderThickness="0">
@@ -392,17 +359,64 @@
           <RowDefinition x:Name="IssuePanelRow" Height="0" />
           <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <TabControl Grid.Row="0" Height="34" ItemsSource="{Binding OpenSections}" SelectedItem="{Binding CurrentSection, Mode=TwoWay}">
-          <TabControl.ItemTemplate>
-            <DataTemplate>
-              <DockPanel LastChildFill="True">
-                <Button DockPanel.Dock="Right" Content="×" Padding="4,0" Margin="4,0,0,0" Tag="{Binding}" Click="CloseSectionTab_Click" ToolTip="{DynamicResource Editor.CloseTab}" />
-                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" MaxWidth="180" TextTrimming="CharacterEllipsis" />
-              </DockPanel>
-            </DataTemplate>
-          </TabControl.ItemTemplate>
-          <TabControl.ContentTemplate><DataTemplate><Grid /></DataTemplate></TabControl.ContentTemplate>
-        </TabControl>
+        <Grid Grid.Row="0" Height="34">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="26" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="26" />
+            <ColumnDefinition Width="112" />
+          </Grid.ColumnDefinitions>
+          <Button Grid.Column="0" Content="‹" Padding="0" Click="ScrollSectionTabsLeft_Click"
+                  ToolTip="{DynamicResource Editor.PreviousTab}" />
+          <ScrollViewer x:Name="SectionTabsScrollViewer" Grid.Column="1"
+                        HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                        CanContentScroll="False">
+            <ListBox x:Name="SectionTabsList" ItemsSource="{Binding OpenSections}"
+                     SelectedItem="{Binding CurrentSection, Mode=TwoWay}"
+                     BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled" HorizontalContentAlignment="Left">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                  <Setter Property="Height" Value="30" />
+                  <Setter Property="MinWidth" Value="90" />
+                  <Setter Property="MaxWidth" Value="190" />
+                  <Setter Property="Padding" Value="4,0" />
+                  <Setter Property="Margin" Value="1,1" />
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                  <Setter Property="VerticalContentAlignment" Value="Center" />
+                  <Setter Property="Background" Value="Transparent" />
+                  <Setter Property="BorderBrush" Value="{StaticResource PanelBorder}" />
+                  <Setter Property="BorderThickness" Value="1" />
+                  <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                      <Setter Property="Foreground" Value="White" />
+                    </Trigger>
+                  </Style.Triggers>
+                </Style>
+              </ListBox.ItemContainerStyle>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <DockPanel LastChildFill="True">
+                    <Button DockPanel.Dock="Right" Content="×" Padding="4,0" Margin="4,0,0,0"
+                            Tag="{Binding}" Click="CloseSectionTab_Click"
+                            ToolTip="{DynamicResource Editor.CloseTab}" />
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </ScrollViewer>
+          <Button Grid.Column="2" Content="›" Padding="0" Click="ScrollSectionTabsRight_Click"
+                  ToolTip="{DynamicResource Editor.NextTab}" />
+          <Button x:Name="SourceModeButton" Grid.Column="3" Style="{StaticResource SourceModeToggleButton}"
+                  Content="{DynamicResource Editor.Source}" Click="SourceMode_Click"
+                  ui:IconGlyph.Glyph="&#xE943;" IsEnabled="False" />
+        </Grid>
         <Border Grid.Row="1" Background="#E8EBEF" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1">
           <Grid>
             <wv2:WebView2 x:Name="EditorWebView" Visibility="Collapsed" />
@@ -503,12 +517,12 @@
                   <Button Click="Format_Click" Tag="italic" ui:IconGlyph.Glyph="&#xE8DB;" Content="{DynamicResource Format.Italic}" ToolTip="{DynamicResource Format.Italic}" />
                   <Button Click="Format_Click" Tag="underline" ui:IconGlyph.Glyph="&#xE8DC;" Content="{DynamicResource Format.Underline}" ToolTip="{DynamicResource Format.Underline}" />
                   <Button Click="Block_Click" Tag="p" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Paragraph}" />
-                  <Button Click="Block_Click" Tag="h1" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading1}" />
-                  <Button Click="Block_Click" Tag="h2" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading2}" />
-                  <Button Click="Block_Click" Tag="h3" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading3}" />
-                  <Button Click="Block_Click" Tag="h4" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading4}" />
-                  <Button Click="Block_Click" Tag="h5" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading5}" />
-                  <Button Click="Block_Click" Tag="h6" ui:IconGlyph.Glyph="&#xE8A5;" Content="{DynamicResource Format.Heading6}" />
+                  <Button Click="Block_Click" Tag="h1" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading1}" />
+                  <Button Click="Block_Click" Tag="h2" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading2}" />
+                  <Button Click="Block_Click" Tag="h3" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading3}" />
+                  <Button Click="Block_Click" Tag="h4" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading4}" />
+                  <Button Click="Block_Click" Tag="h5" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading5}" />
+                  <Button Click="Block_Click" Tag="h6" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Heading6}" />
                   <Button Click="Block_Click" Tag="blockquote" ui:IconGlyph.Glyph="&#xE8D2;" Content="{DynamicResource Format.Quote}" />
                   <Button Click="Format_Click" Tag="insertUnorderedList" ui:IconGlyph.Glyph="&#xE8FD;" Content="{DynamicResource Format.Bullets}" />
                   <Button Click="Format_Click" Tag="insertOrderedList" ui:IconGlyph.Glyph="&#xE8F0;" Content="{DynamicResource Format.Numbering}" />

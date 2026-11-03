@@ -212,6 +212,8 @@ Pencereyi seçip Ctrl+C ile hata metnini kopyalayabilirsiniz.</value></data>
   <data name="App.Title" xml:space="preserve"><value>EPUB Atölyesi</value></data>
   <data name="Tab.Book" xml:space="preserve"><value>Kitap</value></data>
   <data name="Editor.CloseTab" xml:space="preserve"><value>Sekmeyi kapat</value></data>
+  <data name="Editor.PreviousTab" xml:space="preserve"><value>Sekme şeridinde sola kaydır</value></data>
+  <data name="Editor.NextTab" xml:space="preserve"><value>Sekme şeridinde sağa kaydır</value></data>
   <data name="Format.QuoteTooltip" xml:space="preserve"><value>Alıntı</value></data>
   <data name="Format.StrikeTooltip" xml:space="preserve"><value>Üstü çizili</value></data>
   <data name="Format.SuperscriptTooltip" xml:space="preserve"><value>Üst simge</value></data>

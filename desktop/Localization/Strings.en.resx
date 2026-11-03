@@ -212,6 +212,8 @@ Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="App.Title" xml:space="preserve"><value>EPUB Atölyesi</value></data>
   <data name="Tab.Book" xml:space="preserve"><value>Book</value></data>
   <data name="Editor.CloseTab" xml:space="preserve"><value>Close tab</value></data>
+  <data name="Editor.PreviousTab" xml:space="preserve"><value>Scroll tabs left</value></data>
+  <data name="Editor.NextTab" xml:space="preserve"><value>Scroll tabs right</value></data>
   <data name="Format.QuoteTooltip" xml:space="preserve"><value>Quote</value></data>
   <data name="Format.StrikeTooltip" xml:space="preserve"><value>Strikethrough</value></data>
   <data name="Format.SuperscriptTooltip" xml:space="preserve"><value>Superscript</value></data>
