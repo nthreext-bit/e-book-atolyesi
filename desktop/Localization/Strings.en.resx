@@ -13,6 +13,18 @@
   <data name="Menu.Book" xml:space="preserve"><value>Book</value></data>
   <data name="Menu.View" xml:space="preserve"><value>View</value></data>
   <data name="Menu.Help" xml:space="preserve"><value>Help</value></data>
+  <data name="Ribbon.Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Ribbon.Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="Ribbon.Document" xml:space="preserve"><value>Document</value></data>
+  <data name="Ribbon.Clipboard" xml:space="preserve"><value>File and history</value></data>
+  <data name="Ribbon.Formatting" xml:space="preserve"><value>Text formatting</value></data>
+  <data name="Ribbon.Paragraph" xml:space="preserve"><value>Paragraph</value></data>
+  <data name="Ribbon.Navigation" xml:space="preserve"><value>Navigation</value></data>
+  <data name="Ribbon.Objects" xml:space="preserve"><value>Objects</value></data>
+  <data name="Ribbon.BookObjects" xml:space="preserve"><value>Book elements</value></data>
+  <data name="Ribbon.Book" xml:space="preserve"><value>Book</value></data>
+  <data name="Ribbon.Section" xml:space="preserve"><value>Section operations</value></data>
+  <data name="Ribbon.View" xml:space="preserve"><value>View</value></data>
   <data name="File.New" xml:space="preserve"><value>New EPUB</value></data>
   <data name="File.Recent" xml:space="preserve"><value>Recent files</value></data>
   <data name="File.Backup" xml:space="preserve"><value>Create backup before saving (.bak)</value></data>
@@ -33,6 +45,12 @@
   <data name="Tab.Build" xml:space="preserve"><value>Build</value></data>
   <data name="Tab.Files" xml:space="preserve"><value>Files</value></data>
   <data name="Tab.Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Tab.Cover" xml:space="preserve"><value>Cover</value></data>
+  <data name="Cover.PickImage" xml:space="preserve"><value>Select an image to use as the cover</value></data>
+  <data name="Cover.UseSelected" xml:space="preserve"><value>Set as cover</value></data>
+  <data name="Cover.Replace" xml:space="preserve"><value>Add new image</value></data>
+  <data name="Cover.SelectImage" xml:space="preserve"><value>Select a cover image first.</value></data>
+  <data name="Cover.NoSelection" xml:space="preserve"><value>No cover image selected</value></data>
   <data name="Tab.Styles" xml:space="preserve"><value>Styles</value></data>
   <data name="Tab.Objects" xml:space="preserve"><value>Objects</value></data>
   <data name="Tab.Inspector" xml:space="preserve"><value>Inspector</value></data>
@@ -96,6 +114,17 @@
   <data name="Tree.RenameTitle" xml:space="preserve"><value>Rename Section</value></data>
   <data name="Tree.DeletePrompt" xml:space="preserve"><value>Delete section '{0}'?</value></data>
   <data name="Tree.DeleteTitle" xml:space="preserve"><value>Delete Section</value></data>
+  <data name="Tree.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Tree.Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Tree.Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Tree.SetCover" xml:space="preserve"><value>Set as cover</value></data>
+  <data name="Tree.Export" xml:space="preserve"><value>Export...</value></data>
+  <data name="Tree.DeleteResource" xml:space="preserve"><value>Delete unused resource</value></data>
+  <data name="Tree.DeleteResourcePrompt" xml:space="preserve"><value>Delete “{0}” as an unused resource from the EPUB?</value></data>
+  <data name="Tree.ExportComplete" xml:space="preserve"><value>Resource exported: {0}</value></data>
+  <data name="Tree.ResourceMissing" xml:space="preserve"><value>The EPUB resource could not be found.</value></data>
+  <data name="Tree.StylesheetEditUnavailable" xml:space="preserve"><value>This stylesheet is no longer an editable resource.</value></data>
+  <data name="Dialog.AllFilesFilter" xml:space="preserve"><value>All files|*.*</value></data>
   <data name="Unsaved.Prompt" xml:space="preserve"><value>There are unsaved changes. Would you like to save them?</value></data>
   <data name="Unsaved.Title" xml:space="preserve"><value>Unsaved changes</value></data>
   <data name="Errors.AppTitle" xml:space="preserve"><value>Application error</value></data>
@@ -132,6 +161,7 @@ Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="Tools.EditorCommandError" xml:space="preserve"><value>Could not apply command: {0}</value></data>
   <data name="Tools.MessageError" xml:space="preserve"><value>Could not process editor message: {0}</value></data>
   <data name="Tools.LoadSectionError" xml:space="preserve"><value>Could not load section into editor: {0}</value></data>
+  <data name="Editor.MalformedSource" xml:space="preserve"><value>Section {0} is not valid XHTML and was opened in raw source mode. Repair it before switching to the visual editor or saving. XML error: {1}</value></data>
   <data name="Tools.OpenError" xml:space="preserve"><value>Could not open EPUB: {0}</value></data>
   <data name="Tools.SaveError" xml:space="preserve"><value>Could not save book: {0}</value></data>
   <data name="Tools.DeleteError" xml:space="preserve"><value>Could not delete section: {0}</value></data>
@@ -159,6 +189,7 @@ Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="Status.SectionsLoaded" xml:space="preserve"><value>{0} sections loaded.</value></data>
   <data name="Status.NewBook" xml:space="preserve"><value>New EPUB created. Press Ctrl+S to save.</value></data>
   <data name="Status.NoBookToSave" xml:space="preserve"><value>No EPUB is open to save.</value></data>
+  <data name="Status.NoBookToEdit" xml:space="preserve"><value>No EPUB is open to edit.</value></data>
   <data name="Status.Unsaved" xml:space="preserve"><value>There are unsaved changes.</value></data>
   <data name="Dialog.OpenEpub" xml:space="preserve"><value>Open EPUB book</value></data>
   <data name="Dialog.SaveEpub" xml:space="preserve"><value>Save EPUB book</value></data>
@@ -205,7 +236,9 @@ Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="Tools.ReplaceCount" xml:space="preserve"><value>{0} matches replaced.</value></data>
   <data name="Tools.SearchCount" xml:space="preserve"><value>{0} search results found.</value></data>
   <data name="Book.Metadata" xml:space="preserve"><value>Book metadata...</value></data>
+  <data name="Book.OpenCoverEditor" xml:space="preserve"><value>Open cover editor</value></data>
   <data name="Book.GenerateToc" xml:space="preserve"><value>Generate TOC from headings</value></data>
+  <data name="Book.OpenTocEditor" xml:space="preserve"><value>Open table of contents editor</value></data>
   <data name="Book.SplitSection" xml:space="preserve"><value>Split at caret...</value></data>
   <data name="Book.MergeSection" xml:space="preserve"><value>Merge with next section</value></data>
   <data name="Toc.MoveUp" xml:space="preserve"><value>Move up</value></data>
@@ -280,6 +313,32 @@ Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="Validation.Error" xml:space="preserve"><value>ERROR</value></data>
   <data name="Validation.Warning" xml:space="preserve"><value>WARNING</value></data>
   <data name="Validation.Information" xml:space="preserve"><value>INFO</value></data>
+  <data name="Issues.Title" xml:space="preserve"><value>Validation issues</value></data>
+  <data name="Issues.Close" xml:space="preserve"><value>Close issues panel</value></data>
+  <data name="Issues.FilterAll" xml:space="preserve"><value>All severities</value></data>
+  <data name="Issues.Severity" xml:space="preserve"><value>Severity</value></data>
+  <data name="Issues.Rule" xml:space="preserve"><value>Rule</value></data>
+  <data name="Issues.File" xml:space="preserve"><value>File</value></data>
+  <data name="Issues.Line" xml:space="preserve"><value>Line</value></data>
+  <data name="Issues.Column" xml:space="preserve"><value>Column</value></data>
+  <data name="Issues.Message" xml:space="preserve"><value>Message</value></data>
+  <data name="Issues.Fix" xml:space="preserve"><value>Fix</value></data>
+  <data name="Issues.FixAll" xml:space="preserve"><value>Fix all</value></data>
+  <data name="Issues.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Issues.Cancelled" xml:space="preserve"><value>EPUB validation was cancelled.</value></data>
+  <data name="Issues.OperationCancelled" xml:space="preserve"><value>The operation was cancelled.</value></data>
+  <data name="Issues.FixesCancelled" xml:space="preserve"><value>Fixes were cancelled; completed steps were rolled back.</value></data>
+  <data name="Issues.PreparingValidation" xml:space="preserve"><value>Preparing validation…</value></data>
+  <data name="Issues.PreparingFixes" xml:space="preserve"><value>Preparing safe fixes…</value></data>
+  <data name="Issues.ApplyingFix" xml:space="preserve"><value>Applying fix…</value></data>
+  <data name="Issues.StageArchive" xml:space="preserve"><value>Scanning archive</value></data>
+  <data name="Issues.StageManifest" xml:space="preserve"><value>Checking resources</value></data>
+  <data name="Issues.ProgressArchive" xml:space="preserve"><value>{0} ({1}/{2}): {3}</value></data>
+  <data name="Issues.ProgressManifest" xml:space="preserve"><value>{0} ({1}/{2}): {3}</value></data>
+  <data name="Issues.ProgressFixes" xml:space="preserve"><value>Applying fixes ({0}/{1}): {2}</value></data>
+  <data name="Issues.FileNotText" xml:space="preserve"><value>Only safe text files inside the EPUB can be opened.</value></data>
+  <data name="Issues.FileNotFound" xml:space="preserve"><value>The referenced EPUB file was not found.</value></data>
+  <data name="Issues.FileTooLarge" xml:space="preserve"><value>The file is too large to preview (32 MB limit).</value></data>
   <data name="Recovery.Prompt" xml:space="preserve"><value>A recovery copy of the unsaved book “{0}” was found ({1:g}). Restore it?</value></data>
   <data name="Recovery.Restored" xml:space="preserve"><value>“{0}” was restored from a recovery copy. Save the book to keep these changes.</value></data>
   <data name="Recovery.SaveError" xml:space="preserve"><value>Could not create a recovery copy: {0}</value></data>
@@ -305,6 +364,7 @@ Select this window and press Ctrl+C to copy the error text.</value></data>
   <data name="Validation.ManifestResourceMissing" xml:space="preserve"><value>The manifest resource is missing from the archive.</value></data>
   <data name="Validation.XhtmlRootMissing" xml:space="preserve"><value>The XHTML resource must have an html document element.</value></data>
   <data name="Validation.XhtmlBodyMissing" xml:space="preserve"><value>The XHTML resource does not contain a body element.</value></data>
+  <data name="Validation.XhtmlMalformed" xml:space="preserve"><value>The XHTML is not well-formed XML: {0}</value></data>
   <data name="Validation.SpineReferenceMissing" xml:space="preserve"><value>Spine itemref '{0}' has no manifest item.</value></data>
   <data name="Validation.NavigationMissing" xml:space="preserve"><value>An EPUB 3 package should declare a navigation document.</value></data>
   <data name="Validation.PackageReadError" xml:space="preserve"><value>The EPUB could not be validated: {0}</value></data>

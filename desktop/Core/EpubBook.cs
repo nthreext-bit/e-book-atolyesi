@@ -10,6 +10,7 @@ public sealed class EpubBook : IDisposable
     public List<EpubResource> Resources { get; } = [];
     public List<EpubTocEntry> TableOfContents { get; } = [];
     public EpubMetadata Metadata { get; set; } = new();
+    public BookEditHistory EditHistory { get; } = new();
     public bool IsPackageDirty { get; set; }
     public bool IsDirty => IsPackageDirty || Sections.Any(section => section.IsDirty);
 

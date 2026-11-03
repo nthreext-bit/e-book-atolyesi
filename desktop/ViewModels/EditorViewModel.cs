@@ -34,6 +34,7 @@ public partial class EditorViewModel : ObservableObject, IDisposable
     public ObservableCollection<EpubSection> Sections { get; } = [];
     public ObservableCollection<EpubSection> OpenSections { get; } = [];
     public ObservableCollection<EpubResource> Resources { get; } = [];
+    public ObservableCollection<EpubResource> CoverImageChoices { get; } = [];
     public ObservableCollection<EpubResource> CoverResources { get; } = [];
     public ObservableCollection<EpubResource> ImageResources { get; } = [];
     public ObservableCollection<EpubResource> StyleResources { get; } = [];
@@ -66,11 +67,14 @@ public partial class EditorViewModel : ObservableObject, IDisposable
 
     public bool IsDirty => _book?.IsDirty == true;
     public bool HasBook => _book is not null;
+    public bool CanUndoBookEdit => _book?.EditHistory.CanUndo == true;
+    public bool CanRedoBookEdit => _book?.EditHistory.CanRedo == true;
     public string WorkingDirectory => _book?.WorkingDirectory ?? string.Empty;
     public int TotalWordCount => Sections.Sum(section => section.WordCount);
     public int CurrentWordCount => CurrentSection?.WordCount ?? 0;
     public string TotalWordCountText => Strings.Format("Status.Total", TotalWordCount);
     public string CurrentWordCountText => Strings.Format("Status.Current", CurrentWordCount);
+    public EpubResource? CurrentCoverResource => Resources.FirstOrDefault(resource => resource.IsCover);
     public EpubPackageService PackageService => _packageService;
     public Func<Task<bool>>? ConfirmUnsavedChangesAsync { get; set; }
 
@@ -233,7 +237,124 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         NotifyDocumentStateChanged();
     }
 
-    public async Task<IReadOnlyList<EpubValidationIssue>> ValidateCurrentBookAsync(CancellationToken cancellationToken = default)
+    public async Task ApplyBookEditAsync(
+        IBookEditOperation operation,
+        CancellationToken cancellationToken = default)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToEdit"));
+        }
+
+        await _book.EditHistory.ExecuteAsync(_book, operation, cancellationToken);
+        NotifyBookEditHistoryChanged();
+    }
+
+    public async Task ApplyBookEditBatchAsync(
+        string description,
+        IReadOnlyList<IBookEditOperation> operations,
+        CancellationToken cancellationToken = default)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToEdit"));
+        }
+
+        await _book.EditHistory.ExecuteBatchAsync(_book, description, operations, cancellationToken);
+        NotifyBookEditHistoryChanged();
+    }
+
+    public async Task<bool> UndoBookEditAsync(CancellationToken cancellationToken = default)
+    {
+        if (_book is null || !await _book.EditHistory.UndoAsync(_book, cancellationToken))
+        {
+            return false;
+        }
+
+        NotifyBookEditHistoryChanged();
+        return true;
+    }
+
+    public async Task<bool> RedoBookEditAsync(CancellationToken cancellationToken = default)
+    {
+        if (_book is null || !await _book.EditHistory.RedoAsync(_book, cancellationToken))
+        {
+            return false;
+        }
+
+        NotifyBookEditHistoryChanged();
+        return true;
+    }
+
+    public FixApplicability GetFixApplicability(IFix fix)
+    {
+        ArgumentNullException.ThrowIfNull(fix);
+        return _book is null
+            ? new FixApplicability(false, Strings.Get("Status.NoBookToEdit"))
+            : fix.GetApplicability(_book);
+    }
+
+    public async Task ApplyFixAsync(IFix fix, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fix);
+        if (_book is null)
+        {
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToEdit"));
+        }
+
+        var applicability = fix.GetApplicability(_book);
+        if (!applicability.CanApply)
+        {
+            throw new InvalidOperationException(applicability.Reason ?? fix.Description);
+        }
+
+        await _book.EditHistory.ExecuteAsync(_book, fix, cancellationToken);
+        NotifyBookEditHistoryChanged();
+    }
+
+    public async Task<int> ApplyAllSafeFixesAsync(
+        IEnumerable<Issue> issues,
+        CancellationToken cancellationToken = default,
+        IProgress<BookEditProgress>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(issues);
+        if (_book is null)
+        {
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToEdit"));
+        }
+
+        var fixes = new List<IFix>();
+        var seenFixes = new HashSet<IFix>(ReferenceEqualityComparer.Instance);
+        var candidates = issues.Select(issue => issue.Fix).OfType<IFix>().ToArray();
+        for (var index = 0; index < candidates.Length; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var fix = candidates[index];
+            if (seenFixes.Add(fix) && fix.GetApplicability(_book).CanApply)
+            {
+                fixes.Add(fix);
+            }
+            if (index % 16 == 15)
+                await Task.Yield();
+        }
+        if (fixes.Count == 0)
+        {
+            return 0;
+        }
+
+        await _book.EditHistory.ExecuteBatchAsync(
+            _book,
+            Strings.Get("Issues.FixAll"),
+            fixes,
+            cancellationToken,
+            progress);
+        NotifyBookEditHistoryChanged();
+        return fixes.Count;
+    }
+
+    public async Task<IReadOnlyList<EpubValidationIssue>> ValidateCurrentBookAsync(
+        CancellationToken cancellationToken = default,
+        IProgress<EpubValidationProgress>? progress = null)
     {
         if (_book is null)
             throw new InvalidOperationException(Strings.Get("Status.NoBookToSave"));
@@ -248,7 +369,9 @@ public partial class EditorViewModel : ObservableObject, IDisposable
                 await _packageService.CreateRecoverySnapshotAsync(_book, temporaryPath, cancellationToken);
                 validationPath = temporaryPath;
             }
-            return await _epubValidator.ValidateAsync(validationPath, cancellationToken);
+            return await Task.Run(
+                async () => await _epubValidator.ValidateAsync(validationPath, cancellationToken, progress).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -366,6 +489,28 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         NotifyDocumentStateChanged();
     }
 
+    public async Task<string> ReadRawSectionSourceAsync(EpubSection section) =>
+        await _packageService.ReadRawSectionSourceAsync(section);
+
+    public void UpdateRawSectionDocument(string sectionId, string source)
+    {
+        var section = Sections.FirstOrDefault(item => item.Id == sectionId);
+        if (_book is null || section is null || section.RawDocumentXhtml == source)
+        {
+            return;
+        }
+
+        section.RawDocumentXhtml = source;
+        section.WordCount = CountWords(source);
+        section.WordCountKnown = true;
+        section.IsDirty = true;
+        OnPropertyChanged(nameof(TotalWordCount));
+        OnPropertyChanged(nameof(CurrentWordCount));
+        OnPropertyChanged(nameof(TotalWordCountText));
+        OnPropertyChanged(nameof(CurrentWordCountText));
+        NotifyDocumentStateChanged();
+    }
+
     public void SelectSection(EpubSection? section)
     {
         OpenSection(section);
@@ -385,16 +530,84 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CurrentWordCountText));
     }
 
+    public async Task<string> ReadIssueFileAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToEdit"));
+        }
+
+        if (Path.IsPathRooted(relativePath) ||
+            !new[] { ".xhtml", ".html", ".xml", ".opf", ".ncx", ".css", ".txt" }
+                .Contains(Path.GetExtension(relativePath), StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(Strings.Get("Issues.FileNotText"));
+        }
+
+        var rootPath = Path.GetFullPath(_book.WorkingDirectory);
+        var rootPrefix = rootPath.EndsWith(Path.DirectorySeparatorChar)
+            ? rootPath
+            : rootPath + Path.DirectorySeparatorChar;
+        var filePath = Path.GetFullPath(Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!filePath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(Strings.Get("Issues.FileNotText"));
+        }
+
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+        {
+            throw new FileNotFoundException(Strings.Get("Issues.FileNotFound"), relativePath);
+        }
+        if (fileInfo.Length > 32 * 1024 * 1024)
+        {
+            throw new InvalidDataException(Strings.Get("Issues.FileTooLarge"));
+        }
+
+        return await File.ReadAllTextAsync(filePath, cancellationToken);
+    }
+
+    public void UpdateStylesheetText(EpubResource resource, string content)
+    {
+        ArgumentNullException.ThrowIfNull(resource);
+        ArgumentNullException.ThrowIfNull(content);
+        if (_book is null ||
+            !Resources.Any(candidate => ReferenceEquals(candidate, resource)) ||
+            !resource.MediaType.Equals("text/css", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(Strings.Get("Tree.StylesheetEditUnavailable"));
+        }
+
+        var rootPath = Path.GetFullPath(_book.WorkingDirectory);
+        var rootPrefix = rootPath.EndsWith(Path.DirectorySeparatorChar)
+            ? rootPath
+            : rootPath + Path.DirectorySeparatorChar;
+        var filePath = Path.GetFullPath(resource.FullPath);
+        if (!filePath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(Strings.Get("Tree.StylesheetEditUnavailable"));
+        }
+
+        File.WriteAllText(filePath, content, new System.Text.UTF8Encoding(false));
+        _book.IsPackageDirty = true;
+        NotifyDocumentStateChanged();
+    }
+
     private void SetResources(IEnumerable<EpubResource> resources)
     {
         Resources.Clear();
         CoverResources.Clear();
         ImageResources.Clear();
+        CoverImageChoices.Clear();
         StyleResources.Clear();
         OtherResources.Clear();
         foreach (var resource in resources)
         {
             Resources.Add(resource);
+            if (resource.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                CoverImageChoices.Add(resource);
+            }
             if (resource.IsCover)
             {
                 CoverResources.Add(resource);
@@ -412,6 +625,7 @@ public partial class EditorViewModel : ObservableObject, IDisposable
                 OtherResources.Add(resource);
             }
         }
+        OnPropertyChanged(nameof(CurrentCoverResource));
 
         Styles.Clear();
         if (_book is not null)
@@ -492,6 +706,20 @@ public partial class EditorViewModel : ObservableObject, IDisposable
         _packageService.SetCoverImage(_book, current);
         SetResources(_book.Resources);
         NotifyDocumentStateChanged();
+    }
+
+    public async Task AddCoverImageAsync(string imagePath, CancellationToken cancellationToken = default)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException("Önce bir EPUB açın.");
+        }
+
+        var imagePathInBook = await _packageService.AddImageAsync(_book, imagePath, cancellationToken);
+        var imageName = Path.GetFileName(imagePathInBook);
+        var cover = _book.Resources.Last(resource =>
+            Path.GetFileName(resource.Href).Equals(imageName, StringComparison.OrdinalIgnoreCase));
+        SetCoverImage(cover);
     }
 
     public void GenerateTableOfContents()
@@ -709,10 +937,17 @@ public partial class EditorViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(IsDirty));
         OnPropertyChanged(nameof(HasBook));
+        OnPropertyChanged(nameof(CanUndoBookEdit));
+        OnPropertyChanged(nameof(CanRedoBookEdit));
         OnPropertyChanged(nameof(TotalWordCount));
         OnPropertyChanged(nameof(CurrentWordCount));
         OnPropertyChanged(nameof(TotalWordCountText));
         OnPropertyChanged(nameof(CurrentWordCountText));
+    }
+
+    private void NotifyBookEditHistoryChanged()
+    {
+        NotifyDocumentStateChanged();
     }
 
     public void Dispose()
@@ -778,6 +1013,19 @@ public partial class EditorViewModel : ObservableObject, IDisposable
             OtherResources.Remove(resource);
         }
         NotifyDocumentStateChanged();
+    }
+
+    public void DeleteUnusedResource(EpubResource resource)
+    {
+        if (_book is null)
+        {
+            throw new InvalidOperationException(Strings.Get("Status.NoBookToEdit"));
+        }
+
+        _packageService.DeleteUnusedResource(_book, resource);
+        SetResources(_book.Resources);
+        NotifyDocumentStateChanged();
+        _ = RefreshUnusedResourcesAsync(_book);
     }
 
     private static int CountWords(string markup)

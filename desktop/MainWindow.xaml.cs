@@ -1,8 +1,11 @@
 using System.Text.Json;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Xml.Linq;
 using System.Xml;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Navigation;
 using KitaplikEditoru.Core;
@@ -26,22 +29,39 @@ public partial class MainWindow : Window
     private string? _mappedWorkingDirectory;
     private string? _loadedSectionId;
     private const string VirtualHostName = "epubcontent.local";
+    private const string CoverPreviewHostName = "epubcover.local";
     private Point _dragStart;
     private bool _allowClose;
     private bool _closePromptOpen;
     private bool _recoverySnapshotInProgress;
     private Task? _recoverySnapshotTask;
     private bool _sourceMode;
+    private bool _rawDocumentMode;
     private bool _updatingSource;
     private string? _pendingTocFragment;
     private string? _pendingTocSectionId;
     private string? _pendingFindText;
+    private string? _coverPreviewWorkingDirectory;
+    private bool _coverPreviewReady;
+    private bool _issueFilePreview;
+    private EpubResource? _editingStylesheet;
+    private readonly ObservableCollection<Issue> _issues = [];
+    private ICollectionView? _issuesView;
+    private CancellationTokenSource? _issueOperationCancellation;
+    private CoreWebView2ContextMenuItem? _webFindContextMenuItem;
+    private CoreWebView2ContextMenuItem? _webReplaceContextMenuItem;
+    private CoreWebView2ContextMenuItem? _webBoldContextMenuItem;
+    private CoreWebView2ContextMenuItem? _webItalicContextMenuItem;
+    private CoreWebView2ContextMenuItem? _webUnderlineContextMenuItem;
 
     public MainWindow()
     {
         InitializeComponent();
         AttachSectionContextMenuHandlers();
         DataContext = _viewModel;
+        _issuesView = CollectionViewSource.GetDefaultView(_issues);
+        _issuesView.Filter = FilterIssue;
+        IssuesGrid.ItemsSource = _issuesView;
         SourceEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("XML");
         LeftPanelToggle.Checked += LeftPanel_Changed;
         LeftPanelToggle.Unchecked += LeftPanel_Changed;
@@ -65,10 +85,16 @@ public partial class MainWindow : Window
             }
             if (args.PropertyName is nameof(EditorViewModel.CurrentSection) or nameof(EditorViewModel.HasBook))
             {
-                if (args.PropertyName == nameof(EditorViewModel.CurrentSection) && _sourceMode)
+                if (args.PropertyName == nameof(EditorViewModel.CurrentSection) &&
+                    (_sourceMode || _issueFilePreview || _editingStylesheet is not null))
                 {
                     _loadedSectionId = _viewModel.CurrentSection?.Id;
                     _sourceMode = false;
+                    _rawDocumentMode = false;
+                    _issueFilePreview = false;
+                    _editingStylesheet = null;
+                    SourceEditor.IsReadOnly = false;
+                    SourceModeButton.IsEnabled = true;
                     SourceModeButton.Content = Strings.Get("Editor.Source");
                     SourceEditor.Visibility = Visibility.Collapsed;
                 }
@@ -88,8 +114,30 @@ public partial class MainWindow : Window
         {
             var environment = await WebView2EnvironmentService.CreateAsync();
             await EditorWebView.EnsureCoreWebView2Async(environment);
-            EditorWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            try
+            {
+                await CoverPreviewWebView.EnsureCoreWebView2Async(environment);
+                CoverPreviewWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                CoverPreviewWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+                CoverPreviewWebView.CoreWebView2.Settings.IsScriptEnabled = false;
+                CoverPreviewWebView.CoreWebView2.NavigationStarting += (_, args) =>
+                {
+                    if (!args.Uri.StartsWith($"https://{CoverPreviewHostName}/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        args.Cancel = true;
+                    }
+                };
+                _coverPreviewReady = true;
+                RefreshCoverPreview();
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Write(exception, "Cover preview WebView2 initialization failed");
+                _viewModel.StatusMessage = Strings.Format("Tools.FeatureError", exception.Message);
+            }
+            EditorWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             EditorWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            InitializeEditorContextMenu(environment);
             EditorWebView.CoreWebView2.WebMessageReceived += WebView_WebMessageReceived;
             EditorWebView.NavigationCompleted += EditorWebView_NavigationCompleted;
             var editorHtml = EditorDocument.Html
@@ -238,6 +286,38 @@ public partial class MainWindow : Window
                 _pendingTocSectionId = null;
             }
         }
+        catch (Exception exception) when (exception is XmlException or InvalidDataException)
+        {
+            try
+            {
+                var section = _viewModel.CurrentSection;
+                if (section is null)
+                {
+                    return;
+                }
+
+                var rawSource = await _viewModel.ReadRawSectionSourceAsync(section);
+                if (!ReferenceEquals(section, _viewModel.CurrentSection))
+                {
+                    return;
+                }
+
+                _sourceMode = true;
+                _rawDocumentMode = true;
+                _loadedSectionId = section.Id;
+                _updatingSource = true;
+                SourceEditor.Text = rawSource;
+                _updatingSource = false;
+                SourceModeButton.Content = Strings.Get("Editor.Wysiwyg");
+                UpdateEditorVisibility();
+                _viewModel.StatusMessage = Strings.Format("Editor.MalformedSource", section.RelativePath, exception.Message);
+                SourceEditor.Focus();
+            }
+            catch (Exception sourceException)
+            {
+                _viewModel.StatusMessage = Strings.Format("Tools.LoadSectionError", sourceException.Message);
+            }
+        }
         catch (Exception exception)
         {
             _viewModel.StatusMessage = Strings.Format("Tools.LoadSectionError", exception.Message);
@@ -304,8 +384,12 @@ public partial class MainWindow : Window
     private void UpdateEditorVisibility()
     {
         var hasSection = _viewModel.CurrentSection is not null;
-        EditorWebView.Visibility = _webViewReady && hasSection && !_sourceMode ? Visibility.Visible : Visibility.Collapsed;
-        SourceEditor.Visibility = hasSection && _sourceMode ? Visibility.Visible : Visibility.Collapsed;
+        EditorWebView.Visibility = _webViewReady && hasSection && !_sourceMode && !_issueFilePreview && _editingStylesheet is null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        SourceEditor.Visibility = _issueFilePreview || _editingStylesheet is not null || hasSection && _sourceMode
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         NoBookPanel.Visibility = !_viewModel.HasBook && WebViewWarning.Visibility != Visibility.Visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -314,6 +398,99 @@ public partial class MainWindow : Window
         if (e.NewValue is EpubSection section)
         {
             _viewModel.SelectSection(section);
+        }
+        else if (e.NewValue is EpubResource { MediaType: var mediaType } resource &&
+                 mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            OrganizerTabs.SelectedItem = CoverTab;
+            CoverImagePicker.SetCurrentValue(ComboBox.SelectedItemProperty, resource);
+        }
+    }
+
+    private void CoverImagePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ComboBox { SelectedItem: EpubResource resource })
+        {
+            RefreshCoverPreview();
+            return;
+        }
+
+        RefreshCoverPreview(resource);
+    }
+
+    private void RefreshCoverPreview(EpubResource? resource = null)
+    {
+        if (!_coverPreviewReady)
+        {
+            return;
+        }
+
+        try
+        {
+            if (resource is null)
+            {
+                var placeholder = System.Net.WebUtility.HtmlEncode(Strings.Get("Cover.NoSelection"));
+                CoverPreviewWebView.CoreWebView2.NavigateToString(
+                    $"<!doctype html><html><meta charset=\"utf-8\"><body style=\"font:14px sans-serif;color:#667085;text-align:center;padding:2em\">{placeholder}</body></html>");
+                return;
+            }
+
+            var workingDirectory = Path.GetFullPath(_viewModel.WorkingDirectory);
+            var imagePath = Path.GetFullPath(resource.FullPath);
+            var workingDirectoryPrefix = Path.EndsInDirectorySeparator(workingDirectory)
+                ? workingDirectory
+                : workingDirectory + Path.DirectorySeparatorChar;
+            if (!imagePath.StartsWith(workingDirectoryPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Kapak görseli EPUB çalışma klasörünün dışında.");
+            }
+            if (!File.Exists(imagePath))
+            {
+                throw new FileNotFoundException("Kapak resmi EPUB çalışma klasöründe bulunamadı.", imagePath);
+            }
+            if (!string.Equals(_coverPreviewWorkingDirectory, workingDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                if (_coverPreviewWorkingDirectory is not null)
+                {
+                    CoverPreviewWebView.CoreWebView2.ClearVirtualHostNameToFolderMapping(CoverPreviewHostName);
+                }
+                CoverPreviewWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    CoverPreviewHostName, workingDirectory, CoreWebView2HostResourceAccessKind.Allow);
+                _coverPreviewWorkingDirectory = workingDirectory;
+            }
+
+            var relativePath = Path.GetRelativePath(workingDirectory, imagePath).Replace('\\', '/');
+            var encodedPath = string.Join('/', relativePath.Split('/').Select(Uri.EscapeDataString));
+            var imageUri = $"https://{CoverPreviewHostName}/{encodedPath}";
+            var html = $$"""
+                <!doctype html><html lang="tr"><head><meta charset="utf-8">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://{{CoverPreviewHostName}}; style-src 'unsafe-inline'">
+                <style>html,body{width:100%;height:100%;margin:0}body{display:grid;place-items:center;background:#f2f4f7}img{max-width:100%;max-height:100%;object-fit:contain}</style>
+                </head><body><img src="{{imageUri}}" alt="{{System.Net.WebUtility.HtmlEncode(resource.DisplayName)}}"></body></html>
+                """;
+            CoverPreviewWebView.CoreWebView2.NavigateToString(html);
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, $"Cover preview failed: {resource?.Href ?? "(no selection)"}");
+        }
+    }
+
+    private void SetSelectedCover_Click(object sender, RoutedEventArgs e)
+    {
+        if (CoverImagePicker.SelectedItem is not EpubResource resource)
+        {
+            _viewModel.StatusMessage = Strings.Get("Cover.SelectImage");
+            return;
+        }
+
+        try
+        {
+            _viewModel.SetCoverImage(resource);
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Set selected cover failed");
         }
     }
 
@@ -334,17 +511,237 @@ public partial class MainWindow : Window
 
     private void SectionContextMenu_Opened(object sender, RoutedEventArgs e)
     {
-        if (sender is not ContextMenu { Items.Count: >= 2 } contextMenu ||
-            contextMenu.Items[0] is not MenuItem renameItem ||
-            contextMenu.Items[1] is not MenuItem deleteItem)
+        if (sender is not ContextMenu contextMenu ||
+            contextMenu.PlacementTarget is not TreeViewItem treeItem)
         {
             return;
         }
 
-        renameItem.Click -= RenameSection_Click;
-        renameItem.Click += RenameSection_Click;
-        deleteItem.Click -= DeleteSection_Click;
-        deleteItem.Click += DeleteSection_Click;
+        contextMenu.Items.Clear();
+        treeItem.IsSelected = true;
+
+        switch (treeItem.DataContext)
+        {
+            case EpubSection section:
+                contextMenu.Items.Add(CreateTreeMenuItem("Tree.Open", section, OpenTreeSection_Click));
+                contextMenu.Items.Add(CreateTreeMenuItem("Tree.Rename", section, RenameSection_Click));
+                contextMenu.Items.Add(CreateTreeMenuItem("Tree.Delete", section, DeleteSection_Click));
+                contextMenu.Items.Add(new Separator());
+                contextMenu.Items.Add(CreateTreeMenuItem("Book.SplitSection", section, SplitTreeSection_Click));
+                contextMenu.Items.Add(CreateTreeMenuItem("Book.MergeSection", section, MergeTreeSection_Click));
+                contextMenu.Items.OfType<MenuItem>().Single(item => item.Tag is EpubSection && item.Header?.ToString() == Strings.Get("Book.SplitSection")).IsEnabled =
+                    _webViewReady && ReferenceEquals(section, _viewModel.CurrentSection) && !_sourceMode;
+                contextMenu.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.Get("Book.MergeSection")).IsEnabled =
+                    _viewModel.Sections.IndexOf(section) >= 0 && _viewModel.Sections.IndexOf(section) < _viewModel.Sections.Count - 1;
+                break;
+            case EpubResource resource:
+                if (resource.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                {
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.Preview", resource, PreviewTreeImage_Click));
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.SetCover", resource, SetTreeCover_Click));
+                }
+                else if (resource.MediaType.Equals("text/css", StringComparison.OrdinalIgnoreCase))
+                {
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.Open", resource, OpenTreeResource_Click));
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.Edit", resource, OpenTreeResource_Click));
+                }
+                else if (IsTreeTextResource(resource))
+                {
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.Open", resource, OpenTreeResource_Click));
+                }
+
+                if (!resource.IsNavigation)
+                {
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.Export", resource, ExportTreeResource_Click));
+                }
+                if (resource.IsUnused)
+                {
+                    contextMenu.Items.Add(CreateTreeMenuItem("Tree.DeleteResource", resource, DeleteTreeResource_Click));
+                }
+                break;
+        }
+    }
+
+    private MenuItem CreateTreeMenuItem<T>(string headerKey, T target, RoutedEventHandler handler)
+    {
+        var item = new MenuItem { Header = Strings.Get(headerKey), Tag = target };
+        item.Click += handler;
+        return item;
+    }
+
+    private static bool IsTreeTextResource(EpubResource resource) =>
+        resource.MediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+        resource.MediaType is "application/xhtml+xml" or "application/xml" or "application/x-dtbncx+xml";
+
+    private void OpenTreeSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: EpubSection section })
+        {
+            _viewModel.OpenSection(section);
+        }
+    }
+
+    private async void SplitTreeSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: EpubSection section })
+        {
+            return;
+        }
+        _viewModel.OpenSection(section);
+        await LoadCurrentSectionAsync();
+        SplitSection_Click(sender, e);
+    }
+
+    private async void MergeTreeSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: EpubSection section })
+        {
+            return;
+        }
+        _viewModel.OpenSection(section);
+        await LoadCurrentSectionAsync();
+        MergeSection_Click(sender, e);
+    }
+
+    private void PreviewTreeImage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: EpubResource resource })
+        {
+            OrganizerTabs.SelectedItem = CoverTab;
+            RefreshCoverPreview(resource);
+        }
+    }
+
+    private void SetTreeCover_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: EpubResource resource })
+        {
+            try
+            {
+                _viewModel.SetCoverImage(resource);
+                OrganizerTabs.SelectedItem = CoverTab;
+            }
+            catch (Exception exception)
+            {
+                ShowFeatureError(exception, $"Set cover image failed: {resource.Href}");
+            }
+        }
+    }
+
+    private async void OpenTreeResource_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: EpubResource resource })
+        {
+            return;
+        }
+
+        try
+        {
+            await CaptureEditorContentAsync();
+            var editStylesheet = resource.MediaType.Equals("text/css", StringComparison.OrdinalIgnoreCase) &&
+                sender is MenuItem menuItem &&
+                string.Equals(menuItem.Header?.ToString(), Strings.Get("Tree.Edit"), StringComparison.Ordinal);
+            if (resource.MediaType.Equals("text/css", StringComparison.OrdinalIgnoreCase))
+            {
+                var css = await _viewModel.ReadIssueFileAsync(Path.GetRelativePath(
+                    _viewModel.WorkingDirectory, resource.FullPath).Replace('\\', '/'));
+                _updatingSource = true;
+                SourceEditor.Text = css;
+                _updatingSource = false;
+                _editingStylesheet = editStylesheet ? resource : null;
+                _issueFilePreview = !editStylesheet;
+                _sourceMode = false;
+                _rawDocumentMode = false;
+                SourceEditor.IsReadOnly = !editStylesheet;
+                SourceModeButton.IsEnabled = false;
+                OrganizerTabs.SelectedItem = ProjectTab;
+                UpdateEditorVisibility();
+                SourceEditor.Focus();
+            }
+            else
+            {
+                var source = await _viewModel.ReadIssueFileAsync(Path.GetRelativePath(
+                    _viewModel.WorkingDirectory, resource.FullPath).Replace('\\', '/'));
+                _updatingSource = true;
+                SourceEditor.Text = source;
+                _updatingSource = false;
+                _editingStylesheet = null;
+                _issueFilePreview = true;
+                _sourceMode = false;
+                _rawDocumentMode = false;
+                SourceEditor.IsReadOnly = true;
+                SourceModeButton.IsEnabled = false;
+                OrganizerTabs.SelectedItem = ProjectTab;
+                UpdateEditorVisibility();
+                SourceEditor.Focus();
+            }
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, $"Open resource failed: {resource.Href}");
+        }
+    }
+
+    private async void ExportTreeResource_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: EpubResource resource })
+        {
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = Strings.Get("Tree.Export"),
+            FileName = Path.GetFileName(resource.Href),
+            Filter = Strings.Get("Dialog.AllFilesFilter")
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await CaptureEditorContentAsync();
+            if (!File.Exists(resource.FullPath))
+            {
+                throw new FileNotFoundException(Strings.Get("Tree.ResourceMissing"), resource.FullPath);
+            }
+
+            File.Copy(resource.FullPath, dialog.FileName, overwrite: true);
+            _viewModel.StatusMessage = Strings.Format("Tree.ExportComplete", dialog.FileName);
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, $"Export resource failed: {resource.Href}");
+        }
+    }
+
+    private void DeleteTreeResource_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: EpubResource resource } || !resource.IsUnused)
+        {
+            return;
+        }
+
+        if (MessageBox.Show(
+                this,
+                Strings.Format("Tree.DeleteResourcePrompt", resource.Href),
+                Strings.Get("Tree.DeleteResource"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            _viewModel.DeleteUnusedResource(resource);
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, $"Delete resource failed: {resource.Href}");
+        }
     }
 
     private void AttachSectionContextMenuHandlers()
@@ -570,6 +967,142 @@ public partial class MainWindow : Window
         }
     }
 
+    private CoreWebView2ContextMenuItem? _webContextMenuSeparator;
+
+    private void InitializeEditorContextMenu(CoreWebView2Environment environment)
+    {
+        _webFindContextMenuItem = CreateEditorContextMenuItem(environment, Strings.Get("Tools.Find"), "find");
+        _webReplaceContextMenuItem = CreateEditorContextMenuItem(environment, Strings.Get("Tools.Replace"), "replace");
+        _webBoldContextMenuItem = CreateEditorContextMenuItem(environment, Strings.Get("Format.Bold"), "bold");
+        _webItalicContextMenuItem = CreateEditorContextMenuItem(environment, Strings.Get("Format.Italic"), "italic");
+        _webUnderlineContextMenuItem = CreateEditorContextMenuItem(environment, Strings.Get("Format.Underline"), "underline");
+        _webContextMenuSeparator = environment.CreateContextMenuItem(
+            string.Empty, null, CoreWebView2ContextMenuItemKind.Separator);
+        EditorWebView.CoreWebView2.ContextMenuRequested += EditorWebView_ContextMenuRequested;
+    }
+
+    private CoreWebView2ContextMenuItem CreateEditorContextMenuItem(
+        CoreWebView2Environment environment,
+        string label,
+        string command)
+    {
+        var item = environment.CreateContextMenuItem(label, null, CoreWebView2ContextMenuItemKind.Command);
+        item.CustomItemSelected += (_, _) => EditorWebContextCommand_Click(command);
+        return item;
+    }
+
+    private void EditorWebView_ContextMenuRequested(
+        object? sender,
+        CoreWebView2ContextMenuRequestedEventArgs e)
+    {
+        if (!e.ContextMenuTarget.IsEditable)
+        {
+            return;
+        }
+
+        if (_webContextMenuSeparator is not null)
+        {
+            e.MenuItems.Add(_webContextMenuSeparator);
+        }
+
+        foreach (var item in new[]
+        {
+            _webFindContextMenuItem,
+            _webReplaceContextMenuItem,
+            _webBoldContextMenuItem,
+            _webItalicContextMenuItem,
+            _webUnderlineContextMenuItem
+        })
+        {
+            if (item is not null)
+            {
+                item.IsEnabled = e.ContextMenuTarget.IsEditable;
+                e.MenuItems.Add(item);
+            }
+        }
+    }
+
+    private void EditorWebContextCommand_Click(string command)
+    {
+        switch (command)
+        {
+            case "find":
+                Find_Click(this, new RoutedEventArgs());
+                break;
+            case "replace":
+                Replace_Click(this, new RoutedEventArgs());
+                break;
+            case "bold":
+            case "italic":
+            case "underline":
+                _ = ExecuteEditorScriptAsync($"formatText({JsonSerializer.Serialize(command)});");
+                break;
+        }
+    }
+
+    private void SourceEditorContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu contextMenu || contextMenu.Items.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var menuItem in contextMenu.Items.OfType<MenuItem>())
+        {
+            menuItem.IsEnabled = menuItem.Tag?.ToString() switch
+            {
+                "undo" => SourceEditor.Document.UndoStack.CanUndo,
+                "redo" => SourceEditor.Document.UndoStack.CanRedo,
+                "cut" => SourceEditor.SelectionLength > 0 && !_issueFilePreview,
+                "copy" => SourceEditor.SelectionLength > 0,
+                "paste" => Clipboard.ContainsText() && !_issueFilePreview,
+                "selectAll" => SourceEditor.Document.TextLength > 0,
+                "find" or "replace" => _viewModel.HasBook,
+                _ => false
+            };
+        }
+    }
+
+    private void EditorTextContextMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string command })
+        {
+            return;
+        }
+
+        switch (command)
+        {
+            case "undo":
+                if (_issueFilePreview) return;
+                SourceEditor.Document.UndoStack.Undo();
+                break;
+            case "redo":
+                if (_issueFilePreview) return;
+                SourceEditor.Document.UndoStack.Redo();
+                break;
+            case "cut":
+                if (_issueFilePreview) return;
+                SourceEditor.Cut();
+                break;
+            case "copy":
+                SourceEditor.Copy();
+                break;
+            case "paste":
+                if (_issueFilePreview) return;
+                SourceEditor.Paste();
+                break;
+            case "selectAll":
+                SourceEditor.SelectAll();
+                break;
+            case "find":
+                Find_Click(this, new RoutedEventArgs());
+                break;
+            case "replace":
+                Replace_Click(this, new RoutedEventArgs());
+                break;
+        }
+    }
+
     private async void Block_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: string tag })
@@ -717,10 +1250,13 @@ public partial class MainWindow : Window
 
     private async void SourceMode_Click(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.CurrentSection is null) return;
+        if (_viewModel.CurrentSection is null || _editingStylesheet is not null || _issueFilePreview) return;
         if (!_sourceMode)
         {
             await CaptureEditorContentAsync();
+            _issueFilePreview = false;
+            SourceEditor.IsReadOnly = false;
+            _rawDocumentMode = false;
             _updatingSource = true;
             SourceEditor.Text = _viewModel.CurrentSection.ContentXhtml;
             _updatingSource = false;
@@ -733,8 +1269,21 @@ public partial class MainWindow : Window
 
         try
         {
-            ValidateSourceXhtml(SourceEditor.Text);
-            _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id, SourceEditor.Text);
+            if (_rawDocumentMode)
+            {
+                var document = XDocument.Parse(SourceEditor.Text, LoadOptions.PreserveWhitespace);
+                var body = document.Descendants().FirstOrDefault(element => element.Name.LocalName == "body")
+                    ?? throw new XmlException("Belgede body öğesi bulunamadı.");
+                _viewModel.UpdateRawSectionDocument(_viewModel.CurrentSection.Id, SourceEditor.Text);
+                _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id,
+                    string.Concat(body.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting))));
+                _rawDocumentMode = false;
+            }
+            else
+            {
+                ValidateSourceXhtml(SourceEditor.Text);
+                _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id, SourceEditor.Text);
+            }
             _sourceMode = false;
             SourceModeButton.Content = Strings.Get("Editor.Source");
             UpdateEditorVisibility();
@@ -750,14 +1299,38 @@ public partial class MainWindow : Window
 
     private void SourceEditor_TextChanged(object sender, EventArgs e)
     {
-        if (!_sourceMode || _updatingSource || _viewModel.CurrentSection is null) return;
-        _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id, SourceEditor.Text);
+        if (_editingStylesheet is not null && !_updatingSource)
+        {
+            try
+            {
+                _viewModel.UpdateStylesheetText(_editingStylesheet, SourceEditor.Text);
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Write(exception, $"Stylesheet edit failed: {_editingStylesheet.Href}");
+                _viewModel.StatusMessage = Strings.Format("Tools.FeatureError", exception.Message);
+            }
+            return;
+        }
+
+        if (!_sourceMode || _issueFilePreview || _updatingSource || _viewModel.CurrentSection is null) return;
+        if (_rawDocumentMode)
+            _viewModel.UpdateRawSectionDocument(_viewModel.CurrentSection.Id, SourceEditor.Text);
+        else
+            _viewModel.UpdateSectionContent(_viewModel.CurrentSection.Id, SourceEditor.Text);
     }
 
     private static void ValidateSourceXhtml(string source)
     {
         _ = XElement.Parse($"<fragment xmlns=\"http://www.w3.org/1999/xhtml\">{source}</fragment>",
             LoadOptions.PreserveWhitespace);
+    }
+
+    private static void ValidateRawSourceXhtml(string source)
+    {
+        var document = XDocument.Parse(source, LoadOptions.PreserveWhitespace);
+        if (!document.Descendants().Any(element => element.Name.LocalName == "body"))
+            throw new XmlException("Belgede body öğesi bulunamadı.");
     }
 
     private async void InspectorApply_Click(object sender, RoutedEventArgs e)
@@ -791,47 +1364,326 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void ValidateBook_Click(object sender, RoutedEventArgs e)
+    private void OpenCoverEditor_Click(object sender, RoutedEventArgs e)
     {
+        OrganizerTabs.SelectedItem = CoverTab;
+    }
+
+    private void OpenTocEditor_Click(object sender, RoutedEventArgs e)
+    {
+        OrganizerTabs.SelectedItem = TocTab;
+    }
+
+    private async void ValidateBook_Click(object sender, RoutedEventArgs e) =>
+        await RunValidationAsync();
+
+    private async Task RunValidationAsync()
+    {
+        if (_issueOperationCancellation is not null)
+        {
+            return;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        BeginIssuesOperation(cancellation, Strings.Get("Issues.PreparingValidation"));
+        ShowIssuesPanel();
+        _issues.Clear();
+        _issuesView?.Refresh();
+        UpdateIssueFixButtons();
+
         try
         {
+            await Task.Yield();
+            cancellation.Token.ThrowIfCancellationRequested();
             await CaptureEditorContentAsync();
-            var issues = await _viewModel.ValidateCurrentBookAsync();
-            var errorCount = issues.Count(issue => issue.Severity == EpubIssueSeverity.Error);
-            var warningCount = issues.Count(issue => issue.Severity == EpubIssueSeverity.Warning);
+            var progress = new Progress<EpubValidationProgress>(UpdateValidationProgress);
+            var validationIssues = await _viewModel.ValidateCurrentBookAsync(cancellation.Token, progress);
+            foreach (var issue in validationIssues)
+            {
+                _issues.Add(new Issue(
+                    "epub.package-integrity",
+                    issue.Severity switch
+                    {
+                        EpubIssueSeverity.Error => IssueSeverity.Error,
+                        EpubIssueSeverity.Warning => IssueSeverity.Warning,
+                        _ => IssueSeverity.Information
+                    },
+                    issue.Path,
+                    issue.Line,
+                    issue.Column,
+                    issue.Message,
+                    null));
+            }
+
+            _issuesView?.Refresh();
+            var errorCount = _issues.Count(issue => issue.Level == IssueSeverity.Error);
+            var warningCount = _issues.Count(issue => issue.Level == IssueSeverity.Warning);
             _viewModel.StatusMessage = Strings.Format("Tools.ValidationSummary", errorCount, warningCount);
-            var report = string.Join(Environment.NewLine, issues.Select(issue =>
-            {
-                var severity = Strings.Get($"Validation.{issue.Severity}");
-                var path = string.IsNullOrWhiteSpace(issue.Path) ? string.Empty : $" [{issue.Path}]";
-                return $"{severity}{path}: {issue.Message}";
-            }));
-            var window = new Window
-            {
-                Owner = this,
-                Title = Strings.Get("Book.Validate"),
-                Width = 760,
-                Height = 520,
-                MinWidth = 480,
-                MinHeight = 320,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Content = new TextBox
-                {
-                    Text = report,
-                    IsReadOnly = true,
-                    AcceptsReturn = true,
-                    TextWrapping = TextWrapping.Wrap,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    Margin = new Thickness(12),
-                    FontFamily = new System.Windows.Media.FontFamily("Consolas")
-                }
-            };
-            window.ShowDialog();
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            _viewModel.StatusMessage = Strings.Get("Issues.Cancelled");
         }
         catch (Exception exception)
         {
             ShowFeatureError(exception, "EPUB validation failed");
+        }
+        finally
+        {
+            EndIssuesOperation(cancellation);
+            UpdateIssueFixButtons();
+        }
+    }
+
+    private void BeginIssuesOperation(CancellationTokenSource cancellation, string initialStatus)
+    {
+        _issueOperationCancellation = cancellation;
+        ValidationProgress.IsIndeterminate = true;
+        ValidationProgress.Value = 0;
+        ValidationProgress.Visibility = Visibility.Visible;
+        ValidationStatusText.Text = initialStatus;
+        ValidationStatusText.Visibility = Visibility.Visible;
+        CancelValidationButton.IsEnabled = true;
+        CancelValidationButton.Visibility = Visibility.Visible;
+        ValidateBookMenuItem.IsEnabled = false;
+        ValidateBookButton.IsEnabled = false;
+        FixIssueButton.IsEnabled = false;
+        FixAllIssuesButton.IsEnabled = false;
+    }
+
+    private void EndIssuesOperation(CancellationTokenSource cancellation)
+    {
+        if (ReferenceEquals(_issueOperationCancellation, cancellation))
+            _issueOperationCancellation = null;
+        cancellation.Dispose();
+        ValidationProgress.Visibility = Visibility.Collapsed;
+        ValidationStatusText.Visibility = Visibility.Collapsed;
+        CancelValidationButton.Visibility = Visibility.Collapsed;
+        CancelValidationButton.IsEnabled = true;
+        ValidateBookMenuItem.IsEnabled = true;
+        ValidateBookButton.IsEnabled = true;
+    }
+
+    private void UpdateValidationProgress(EpubValidationProgress progress)
+    {
+        var (key, stage) = progress.Stage switch
+        {
+            EpubValidationStage.Archive => ("Issues.ProgressArchive", Strings.Get("Issues.StageArchive")),
+            _ => ("Issues.ProgressManifest", Strings.Get("Issues.StageManifest"))
+        };
+        ValidationStatusText.Text = Strings.Format(
+            key, stage, progress.Completed, progress.Total, progress.CurrentPath);
+        ValidationProgress.IsIndeterminate = progress.Total <= 0;
+        ValidationProgress.Maximum = Math.Max(progress.Total, 1);
+        ValidationProgress.Value = Math.Clamp(progress.Completed, 0, Math.Max(progress.Total, 1));
+    }
+
+    private void UpdateFixProgress(BookEditProgress progress)
+    {
+        ValidationStatusText.Text = Strings.Format(
+            "Issues.ProgressFixes", progress.Completed, progress.Total, progress.Description);
+        ValidationProgress.IsIndeterminate = false;
+        ValidationProgress.Maximum = Math.Max(progress.Total, 1);
+        ValidationProgress.Value = Math.Clamp(progress.Completed, 0, Math.Max(progress.Total, 1));
+    }
+
+    private void ShowIssuesPanel()
+    {
+        IssuesPanel.Visibility = Visibility.Visible;
+        IssuePanelRow.Height = new GridLength(190);
+    }
+
+    private void CloseIssuesPanel_Click(object sender, RoutedEventArgs e)
+    {
+        _issueOperationCancellation?.Cancel();
+        IssuesPanel.Visibility = Visibility.Collapsed;
+        IssuePanelRow.Height = new GridLength(0);
+    }
+
+    private void CancelValidation_Click(object sender, RoutedEventArgs e)
+    {
+        CancelValidationButton.IsEnabled = false;
+        _issueOperationCancellation?.Cancel();
+    }
+
+    private bool FilterIssue(object item)
+    {
+        if (item is not Issue issue || IssueFilter.SelectedItem is not ComboBoxItem { Tag: string selectedFilter })
+        {
+            return true;
+        }
+
+        return selectedFilter == "All" ||
+            string.Equals(selectedFilter, issue.Level.ToString(), StringComparison.Ordinal);
+    }
+
+    private void IssueFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _issuesView?.Refresh();
+    }
+
+    private void IssuesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        UpdateIssueFixButtons();
+
+    private void UpdateIssueFixButtons()
+    {
+        var canEditIssues = _issueOperationCancellation is null;
+        FixIssueButton.IsEnabled = canEditIssues &&
+            IssuesGrid.SelectedItem is Issue { Fix: not null } issue &&
+            _viewModel.GetFixApplicability(issue.Fix).CanApply;
+        FixAllIssuesButton.IsEnabled = canEditIssues && _issues.Any(issue =>
+            issue.Fix is not null && _viewModel.GetFixApplicability(issue.Fix).CanApply);
+    }
+
+    private async void FixIssue_Click(object sender, RoutedEventArgs e)
+    {
+        if (_issueOperationCancellation is not null ||
+            IssuesGrid.SelectedItem is not Issue { Fix: not null } issue)
+        {
+            return;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        BeginIssuesOperation(cancellation, Strings.Get("Issues.ApplyingFix"));
+        var applied = false;
+        try
+        {
+            await Task.Yield();
+            cancellation.Token.ThrowIfCancellationRequested();
+            await _viewModel.ApplyFixAsync(issue.Fix, cancellation.Token);
+            applied = true;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            _viewModel.StatusMessage = Strings.Get("Issues.OperationCancelled");
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "EPUB issue fix failed");
+        }
+        finally
+        {
+            EndIssuesOperation(cancellation);
+            UpdateIssueFixButtons();
+        }
+
+        if (applied)
+            await RunValidationAsync();
+    }
+
+    private async void FixAllIssues_Click(object sender, RoutedEventArgs e)
+    {
+        if (_issueOperationCancellation is not null)
+            return;
+
+        var cancellation = new CancellationTokenSource();
+        BeginIssuesOperation(cancellation, Strings.Get("Issues.PreparingFixes"));
+        var fixedCount = 0;
+        try
+        {
+            await Task.Yield();
+            cancellation.Token.ThrowIfCancellationRequested();
+            var progress = new Progress<BookEditProgress>(UpdateFixProgress);
+            fixedCount = await _viewModel.ApplyAllSafeFixesAsync(
+                _issues.ToArray(), cancellation.Token, progress);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            _viewModel.StatusMessage = Strings.Get("Issues.FixesCancelled");
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "EPUB issue fixes failed");
+        }
+        finally
+        {
+            EndIssuesOperation(cancellation);
+            UpdateIssueFixButtons();
+        }
+
+        if (fixedCount > 0)
+            await RunValidationAsync();
+    }
+
+    private async void IssuesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (IssuesGrid.SelectedItem is not Issue issue || string.IsNullOrWhiteSpace(issue.File))
+        {
+            return;
+        }
+
+        var relativePath = issue.File.Replace('\\', '/').TrimStart('/');
+        if (Path.IsPathRooted(issue.File) || relativePath.Split('/').Any(part => part == ".."))
+        {
+            return;
+        }
+
+        try
+        {
+            var section = _viewModel.Sections.FirstOrDefault(candidate =>
+                string.Equals(candidate.RelativePath.Replace('\\', '/'), relativePath, StringComparison.OrdinalIgnoreCase));
+
+            await CaptureEditorContentAsync();
+            OrganizerTabs.SelectedItem = ProjectTab;
+            if (section is not null)
+            {
+                _editingStylesheet = null;
+                _issueFilePreview = false;
+                SourceEditor.IsReadOnly = false;
+                SourceModeButton.IsEnabled = true;
+                _viewModel.OpenSection(section);
+                try
+                {
+                    await _viewModel.EnsureSectionLoadedAsync(section);
+                    await LoadCurrentSectionAsync();
+                    _updatingSource = true;
+                    SourceEditor.Text = section.ContentXhtml;
+                    _updatingSource = false;
+                    _sourceMode = true;
+                    _rawDocumentMode = false;
+                    SourceModeButton.Content = Strings.Get("Editor.Wysiwyg");
+                }
+                catch (Exception exception) when (exception is XmlException or InvalidDataException)
+                {
+                    var rawSource = await _viewModel.ReadRawSectionSourceAsync(section);
+                    _updatingSource = true;
+                    SourceEditor.Text = rawSource;
+                    _updatingSource = false;
+                    _sourceMode = true;
+                    _rawDocumentMode = true;
+                    SourceModeButton.Content = Strings.Get("Editor.Wysiwyg");
+                }
+            }
+            else
+            {
+                var source = await _viewModel.ReadIssueFileAsync(relativePath);
+                _updatingSource = true;
+                SourceEditor.Text = source;
+                _updatingSource = false;
+                _editingStylesheet = null;
+                _issueFilePreview = true;
+                _sourceMode = false;
+                _rawDocumentMode = false;
+                SourceEditor.IsReadOnly = true;
+                SourceModeButton.IsEnabled = false;
+            }
+
+            UpdateEditorVisibility();
+            if (issue.Line is not int lineNumber)
+            {
+                SourceEditor.Focus();
+                return;
+            }
+
+            var line = SourceEditor.Document.GetLineByNumber(Math.Clamp(lineNumber, 1, SourceEditor.Document.LineCount));
+            var column = Math.Clamp(issue.Column.GetValueOrDefault(1) - 1, 0, line.Length);
+            SourceEditor.CaretOffset = line.Offset + column;
+            SourceEditor.ScrollToLine(line.LineNumber);
+            SourceEditor.Focus();
+        }
+        catch (Exception exception)
+        {
+            ShowFeatureError(exception, "Could not open EPUB issue file");
         }
     }
 
@@ -943,13 +1795,14 @@ public partial class MainWindow : Window
     private async void SetCover_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog { Title = Strings.Get("Dialog.CoverImage"), Filter = Strings.Get("Dialog.ImagesFilter") };
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
         try
         {
-            var insertedPath = await _viewModel.AddImageAsync(dialog.FileName);
-            var imageName = Path.GetFileName(insertedPath);
-            var cover = _viewModel.Resources.Last(resource => resource.Href.EndsWith(imageName, StringComparison.OrdinalIgnoreCase));
-            _viewModel.SetCoverImage(cover);
+            await _viewModel.AddCoverImageAsync(dialog.FileName);
         }
         catch (Exception exception)
         {
@@ -1188,7 +2041,16 @@ public partial class MainWindow : Window
         {
             var count = _viewModel.ReplaceText(options);
             _viewModel.StatusMessage = Strings.Format("Tools.ReplaceCount", count);
-            if (_viewModel.CurrentSection is not null) await LoadCurrentSectionAsync();
+            if (_sourceMode && _viewModel.CurrentSection is not null)
+            {
+                _updatingSource = true;
+                SourceEditor.Text = _viewModel.CurrentSection.ContentXhtml;
+                _updatingSource = false;
+            }
+            else if (_viewModel.CurrentSection is not null)
+            {
+                await LoadCurrentSectionAsync();
+            }
         }
         catch (Exception exception)
         {
@@ -1215,7 +2077,7 @@ public partial class MainWindow : Window
 
     private async Task CaptureEditorContentAsync()
     {
-        if (_sourceMode) return;
+        if (_sourceMode || _editingStylesheet is not null || _issueFilePreview) return;
         if (!_webViewReady || _loadedSectionId is null)
         {
             return;
@@ -1244,7 +2106,10 @@ public partial class MainWindow : Window
         {
             try
             {
-                ValidateSourceXhtml(SourceEditor.Text);
+                if (_rawDocumentMode)
+                    ValidateRawSourceXhtml(SourceEditor.Text);
+                else
+                    ValidateSourceXhtml(SourceEditor.Text);
             }
             catch (XmlException exception)
             {
@@ -1264,7 +2129,10 @@ public partial class MainWindow : Window
         {
             try
             {
-                ValidateSourceXhtml(SourceEditor.Text);
+                if (_rawDocumentMode)
+                    ValidateRawSourceXhtml(SourceEditor.Text);
+                else
+                    ValidateSourceXhtml(SourceEditor.Text);
             }
             catch (XmlException exception)
             {
@@ -1375,15 +2243,13 @@ public partial class MainWindow : Window
             await CaptureEditorContentAsync();
             if (!_viewModel.IsDirty)
             {
-                _allowClose = true;
-                Close();
+                ScheduleClose();
                 return;
             }
 
             if (await ConfirmUnsavedChangesAsync())
             {
-                _allowClose = true;
-                Close();
+                ScheduleClose();
             }
         }
         finally
@@ -1392,6 +2258,12 @@ public partial class MainWindow : Window
             if (!_allowClose)
                 _recoveryTimer.Start();
         }
+    }
+
+    private void ScheduleClose()
+    {
+        _allowClose = true;
+        Dispatcher.BeginInvoke(new Action(Close), DispatcherPriority.Normal);
     }
 
     private async Task<bool> ConfirmUnsavedChangesAsync()

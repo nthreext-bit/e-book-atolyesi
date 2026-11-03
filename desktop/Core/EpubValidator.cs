@@ -6,6 +6,18 @@ using KitaplikEditoru.Localization;
 
 namespace KitaplikEditoru.Core;
 
+public enum EpubValidationStage
+{
+    Archive,
+    Manifest
+}
+
+public sealed record EpubValidationProgress(
+    EpubValidationStage Stage,
+    int Completed,
+    int Total,
+    string CurrentPath);
+
 public sealed class EpubValidator
 {
     private const long MaximumXmlEntryLength = 32 * 1024 * 1024;
@@ -13,7 +25,8 @@ public sealed class EpubValidator
 
     public async Task<IReadOnlyList<EpubValidationIssue>> ValidateAsync(
         string epubPath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<EpubValidationProgress>? progress = null)
     {
         var issues = new List<EpubValidationIssue>();
         try
@@ -27,11 +40,15 @@ public sealed class EpubValidator
             }
 
             var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.Ordinal);
-            foreach (var entry in archive.Entries)
+            for (var index = 0; index < archive.Entries.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var entry = archive.Entries[index];
                 if (!entries.TryAdd(entry.FullName, entry))
                     Add(issues, EpubIssueSeverity.Error, entry.FullName, Strings.Get("Validation.DuplicatePath"));
+                if (index % 16 == 0 || index == archive.Entries.Count - 1)
+                    progress?.Report(new EpubValidationProgress(
+                        EpubValidationStage.Archive, index + 1, archive.Entries.Count, entry.FullName));
             }
 
             var first = archive.Entries[0];
@@ -91,11 +108,17 @@ public sealed class EpubValidator
 
             var packageDirectory = Path.GetDirectoryName(packageEntryPath)?.Replace('\\', '/') ?? string.Empty;
             var manifestById = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var item in manifest.Elements().Where(element => element.Name.LocalName == "item"))
+            var manifestItems = manifest.Elements().Where(element => element.Name.LocalName == "item").ToArray();
+            for (var index = 0; index < manifestItems.Length; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var item = manifestItems[index];
+                var href = (string?)item.Attribute("href") ?? string.Empty;
+                if (index % 8 == 0 || index == manifestItems.Length - 1)
+                    progress?.Report(new EpubValidationProgress(
+                        EpubValidationStage.Manifest, index, manifestItems.Length, href));
+
                 var id = (string?)item.Attribute("id");
-                var href = (string?)item.Attribute("href");
                 var mediaType = (string?)item.Attribute("media-type");
                 if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(href) || string.IsNullOrWhiteSpace(mediaType))
                 {
@@ -118,18 +141,40 @@ public sealed class EpubValidator
                 }
                 if (mediaType.Equals("application/xhtml+xml", StringComparison.OrdinalIgnoreCase))
                 {
-                    var document = await ReadXmlAsync(resourceEntry, cancellationToken);
+                    XDocument? document;
+                    try
+                    {
+                        // EPUB XHTML content documents must be well-formed XML; HTML recovery would hide conformance errors.
+                        document = await ReadXmlAsync(resourceEntry, cancellationToken);
+                    }
+                    catch (XmlException exception)
+                    {
+                        Add(issues, EpubIssueSeverity.Error, itemPath,
+                            Strings.Format("Validation.XhtmlMalformed", exception.Message),
+                            exception.LineNumber > 0 ? exception.LineNumber : null,
+                            exception.LinePosition > 0 ? exception.LinePosition : null);
+                        continue;
+                    }
+                    catch (InvalidDataException exception)
+                    {
+                        Add(issues, EpubIssueSeverity.Error, itemPath, exception.Message);
+                        continue;
+                    }
+
                     if (document?.Root?.Name.LocalName != "html")
                         Add(issues, EpubIssueSeverity.Error, itemPath, Strings.Get("Validation.XhtmlRootMissing"));
-                    else if (!document.Descendants().Any(element => element.Name.LocalName == "body"))
+                    else if (!ContainsElement(document, "body", cancellationToken))
                         Add(issues, EpubIssueSeverity.Error, itemPath, Strings.Get("Validation.XhtmlBodyMissing"));
                     if (document is not null)
-                        ValidateDocumentReferences(document, itemPath, entries, issues);
+                        ValidateDocumentReferences(document, itemPath, entries, issues, cancellationToken);
                 }
             }
+            progress?.Report(new EpubValidationProgress(
+                EpubValidationStage.Manifest, manifestItems.Length, manifestItems.Length, string.Empty));
 
             foreach (var itemRef in spine.Elements().Where(element => element.Name.LocalName == "itemref"))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var idref = (string?)itemRef.Attribute("idref");
                 if (string.IsNullOrWhiteSpace(idref) || !manifestById.ContainsKey(idref))
                     Add(issues, EpubIssueSeverity.Error, packageEntryPath,
@@ -215,12 +260,14 @@ public sealed class EpubValidator
         XDocument document,
         string documentPath,
         IReadOnlyDictionary<string, ZipArchiveEntry> entries,
-        ICollection<EpubValidationIssue> issues)
+        ICollection<EpubValidationIssue> issues,
+        CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(documentPath)?.Replace('\\', '/') ?? string.Empty;
         foreach (var attribute in document.Descendants().Attributes()
                      .Where(attribute => attribute.Name.LocalName is "href" or "src"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var href = attribute.Value.Trim();
             if (href.Length == 0)
                 continue;
@@ -254,9 +301,26 @@ public sealed class EpubValidator
         }
     }
 
+    private static bool ContainsElement(
+        XDocument document,
+        string localName,
+        CancellationToken cancellationToken)
+    {
+        foreach (var element in document.Descendants())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (element.Name.LocalName == localName)
+                return true;
+        }
+
+        return false;
+    }
+
     private static void Add(
         ICollection<EpubValidationIssue> issues,
         EpubIssueSeverity severity,
         string path,
-        string message) => issues.Add(new EpubValidationIssue(severity, path, message));
+        string message,
+        int? line = null,
+        int? column = null) => issues.Add(new EpubValidationIssue(severity, path, message, line, column));
 }

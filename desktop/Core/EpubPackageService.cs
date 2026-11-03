@@ -191,8 +191,13 @@ public sealed class EpubPackageService
                 var properties = ((string?)item.Attribute("properties"))?.Split(' ') ?? [];
                 var mediaType = (string?)item.Attribute("media-type") ?? string.Empty;
                 var isNavigation = properties.Contains("nav") || mediaType == "application/x-dtbncx+xml";
+                var looksLikeCover = mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) &&
+                    (id.Contains("cover", StringComparison.OrdinalIgnoreCase) ||
+                     Path.GetFileNameWithoutExtension(href).Contains("cover", StringComparison.OrdinalIgnoreCase));
                 var resource = new EpubResource(id, href, mediaType,
-                    GetSafeDestination(workingDirectory, resourcePath), id == epub2CoverId || properties.Contains("cover-image"), isNavigation);
+                    GetSafeDestination(workingDirectory, resourcePath),
+                    id == epub2CoverId || properties.Contains("cover-image") || looksLikeCover,
+                    isNavigation);
                 resourcesById[id] = resource;
             }
 
@@ -262,6 +267,17 @@ public sealed class EpubPackageService
         section.WordCount = data.WordCount;
         section.WordCountKnown = true;
         section.IsLoaded = true;
+    }
+
+    public async Task<string> ReadRawSectionSourceAsync(EpubSection section, CancellationToken cancellationToken = default)
+    {
+        var file = new FileInfo(section.FilePath);
+        if (file.Length > 32 * 1024 * 1024)
+        {
+            throw new InvalidDataException($"'{section.RelativePath}' exceeds the 32 MB source-view limit.");
+        }
+
+        return await File.ReadAllTextAsync(section.FilePath, cancellationToken);
     }
 
     public async Task ImportSectionContentAsync(
@@ -581,6 +597,44 @@ public sealed class EpubPackageService
         book.IsPackageDirty = true;
     }
 
+    public void DeleteUnusedResource(EpubBook book, EpubResource resource)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        ArgumentNullException.ThrowIfNull(resource);
+        var currentResource = book.Resources.FirstOrDefault(candidate => candidate.Id == resource.Id);
+        if (resource.IsNavigation || resource.IsCover || IsXhtmlResource(resource) ||
+            currentResource is null ||
+            !FindUnusedResourceIds(book).Contains(resource.Id))
+        {
+            throw new InvalidOperationException("Only a currently unused, non-navigation EPUB resource can be deleted.");
+        }
+
+        var workingDirectory = Path.GetFullPath(book.WorkingDirectory);
+        var workingDirectoryPrefix = Path.EndsInDirectorySeparator(workingDirectory)
+            ? workingDirectory
+            : workingDirectory + Path.DirectorySeparatorChar;
+        var resourcePath = Path.GetFullPath(currentResource.FullPath);
+        if (!resourcePath.StartsWith(workingDirectoryPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("EPUB resource path is outside the working directory.");
+        }
+
+        var packagePath = GetSafeDestination(book.WorkingDirectory, book.PackageRelativePath);
+        var package = XDocument.Load(packagePath, LoadOptions.PreserveWhitespace);
+        var manifest = package.Descendants().FirstOrDefault(element => element.Name.LocalName == "manifest")
+            ?? throw new InvalidDataException("EPUB OPF manifest bulunamadı.");
+        var item = manifest.Elements().FirstOrDefault(element => (string?)element.Attribute("id") == currentResource.Id)
+            ?? throw new InvalidDataException("EPUB kaynağı manifest içinde bulunamadı.");
+        item.Remove();
+        SaveXmlDocument(package, packagePath);
+        book.Resources.RemoveAll(candidate => candidate.Id == currentResource.Id);
+        book.IsPackageDirty = true;
+        if (File.Exists(resourcePath))
+        {
+            File.Delete(resourcePath);
+        }
+    }
+
     public HashSet<string> FindUnusedResourceIds(EpubBook book)
     {
         var referencedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -604,18 +658,29 @@ public sealed class EpubPackageService
                     body.ReplaceNodes(fragment.Nodes());
                 }
                 foreach (var attribute in document.Descendants().Attributes().Where(attribute =>
-                             attribute.Name.LocalName is "href" or "src"))
+                             attribute.Name.LocalName is "href" or "src" or "srcset" or "data" or "poster" or "xlink:href"))
                 {
-                    if (TryResolveLocalReference(source.FullPath, attribute.Value, out var target))
-                        referencedPaths.Add(target);
+                    var references = attribute.Name.LocalName == "srcset"
+                        ? attribute.Value.Split(',').Select(candidate => candidate.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty)
+                        : [attribute.Value];
+                    foreach (var reference in references)
+                    {
+                        if (TryResolveLocalReference(source.FullPath, reference, out var target))
+                            referencedPaths.Add(target);
+                    }
                 }
             }
             else
             {
-                foreach (Match match in Regex.Matches(File.ReadAllText(source.FullPath),
-                             @"url\(\s*['""]?(?<path>[^)'""]+)['""]?\s*\)", RegexOptions.IgnoreCase))
+                var css = File.ReadAllText(source.FullPath);
+                foreach (Match match in Regex.Matches(css,
+                             @"url\(\s*['""]?(?<path>[^)'""]+)['""]?\s*\)|@import\s+(?:url\(\s*)?['""](?<import>[^'""]+)['""]",
+                             RegexOptions.IgnoreCase))
                 {
-                    if (TryResolveLocalReference(source.FullPath, match.Groups["path"].Value, out var target))
+                    var reference = match.Groups["path"].Success
+                        ? match.Groups["path"].Value
+                        : match.Groups["import"].Value;
+                    if (TryResolveLocalReference(source.FullPath, reference, out var target))
                         referencedPaths.Add(target);
                 }
             }
@@ -1147,11 +1212,34 @@ public sealed class EpubPackageService
         foreach (var section in book.Sections.Where(section => section.IsDirty))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var fragment = XElement.Parse($"<fragment xmlns=\"{XhtmlNamespace}\">{section.ContentXhtml}</fragment>", LoadOptions.PreserveWhitespace);
-            var document = XDocument.Load(section.FilePath, LoadOptions.PreserveWhitespace);
+            XDocument document;
+            if (section.RawDocumentXhtml is not null)
+            {
+                if (updateBookState)
+                {
+                    document = XDocument.Parse(section.RawDocumentXhtml, LoadOptions.PreserveWhitespace);
+                }
+                else
+                {
+                    await File.WriteAllTextAsync(
+                        section.FilePath, section.RawDocumentXhtml, new UTF8Encoding(false), cancellationToken);
+                    continue;
+                }
+            }
+            else
+            {
+                document = XDocument.Load(section.FilePath, LoadOptions.PreserveWhitespace);
+            }
+
             var body = document.Descendants().FirstOrDefault(element => element.Name.LocalName == "body")
                 ?? throw new InvalidDataException($"'{section.RelativePath}' içinde body öğesi bulunamadı.");
-            body.ReplaceNodes(fragment.Nodes());
+            if (section.IsLoaded)
+            {
+                var fragment = XElement.Parse(
+                    $"<fragment xmlns=\"{XhtmlNamespace}\">{section.ContentXhtml}</fragment>",
+                    LoadOptions.PreserveWhitespace);
+                body.ReplaceNodes(fragment.Nodes());
+            }
 
             await using var stream = new FileStream(section.FilePath, FileMode.Create, FileAccess.Write, FileShare.None);
             using var writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = false });
@@ -1193,6 +1281,7 @@ public sealed class EpubPackageService
                 foreach (var section in book.Sections)
                 {
                     section.IsDirty = false;
+                    section.RawDocumentXhtml = null;
                 }
                 book.IsPackageDirty = false;
             }

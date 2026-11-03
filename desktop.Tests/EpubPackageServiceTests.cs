@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using KitaplikEditoru.Core;
 using Xunit;
@@ -67,6 +68,50 @@ public sealed class EpubPackageServiceTests
             Assert.Contains("<table", reopened.Sections[0].ContentXhtml);
             Assert.Contains("epub:type=\"footnote\"", reopened.Sections[0].ContentXhtml);
             Assert.Contains(reopened.Resources, resource => resource.Href == "Images/sample.png");
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(outputPath);
+        }
+    }
+
+    [Fact]
+    public async Task MalformedXhtmlCanBeOpenedAsRawSourceRepairedAndSaved()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0", malformedXhtml: true);
+        var outputPath = Path.Combine(Path.GetTempPath(), $"repaired-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using (var book = await service.OpenAsync(fixturePath))
+            {
+                var section = Assert.Single(book.Sections);
+                await Assert.ThrowsAsync<XmlException>(() => service.LoadSectionAsync(section));
+                var rawSource = await service.ReadRawSectionSourceAsync(section);
+                Assert.Contains("<p>Broken paragraph</body>", rawSource);
+
+                var validationIssues = await new EpubValidator().ValidateAsync(fixturePath);
+                var malformedIssue = Assert.Single(validationIssues, issue =>
+                    issue.Path == "OEBPS/Text/chapter.xhtml" && issue.Line.HasValue);
+                Assert.Equal(EpubIssueSeverity.Error, malformedIssue.Severity);
+                Assert.True(malformedIssue.Line > 0);
+                Assert.True(malformedIssue.Column > 0);
+                Assert.DoesNotContain(validationIssues, issue => issue.Path == fixturePath);
+
+                section.RawDocumentXhtml = rawSource.Replace(
+                    "<p>Broken paragraph</body>", "<p>Repaired paragraph</p></body>", StringComparison.Ordinal);
+                section.IsDirty = true;
+                await service.SaveAsync(book, outputPath);
+            }
+
+            using var reopened = await service.OpenAsync(outputPath);
+            await service.LoadSectionAsync(Assert.Single(reopened.Sections));
+            Assert.Contains("Repaired paragraph", reopened.Sections[0].ContentXhtml);
+            using var original = ZipFile.OpenRead(fixturePath);
+            Assert.Contains("<p>Broken paragraph</body>",
+                Encoding.UTF8.GetString(await ReadEntryAsync(original, "OEBPS/Text/chapter.xhtml")));
         }
         finally
         {
@@ -310,6 +355,73 @@ public sealed class EpubPackageServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("2.0")]
+    [InlineData("3.0")]
+    public async Task CoverNamedImageIsAvailableAsCoverWithoutExplicitPackageMetadata(string version)
+    {
+        var fixturePath = await CreateFixtureAsync(version, coverNamedImage: true);
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.OpenAsync(fixturePath);
+            var cover = Assert.Single(book.Resources, resource => resource.MediaType == "image/png");
+            Assert.True(cover.IsCover);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteUnusedResourceRemovesItFromManifestAndWorkingPackage()
+    {
+        var fixturePath = await CreateFixtureAsync("3.0");
+        var outputPath = Path.Combine(Path.GetTempPath(), $"delete-unused-{Guid.NewGuid():N}.epub");
+        var service = new EpubPackageService();
+
+        try
+        {
+            using var book = await service.OpenAsync(fixturePath);
+            var unusedPath = Path.Combine(book.WorkingDirectory, "OEBPS", "Images", "unused.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(unusedPath)!);
+            await File.WriteAllBytesAsync(unusedPath, [137, 80, 78, 71, 13, 10, 26, 10]);
+
+            var packagePath = Path.Combine(book.WorkingDirectory, book.PackageRelativePath);
+            var package = XDocument.Load(packagePath, LoadOptions.PreserveWhitespace);
+            var manifest = package.Descendants().Single(element => element.Name.LocalName == "manifest");
+            manifest.Add(new XElement(manifest.Name.Namespace + "item",
+                new XAttribute("id", "unused-image"),
+                new XAttribute("href", "Images/unused.png"),
+                new XAttribute("media-type", "image/png")));
+            package.Save(packagePath, SaveOptions.DisableFormatting);
+
+            var resource = new EpubResource("unused-image", "Images/unused.png", "image/png", unusedPath);
+            book.Resources.Add(resource);
+
+            service.DeleteUnusedResource(book, resource);
+            Assert.False(File.Exists(unusedPath));
+            Assert.DoesNotContain(book.Resources, candidate => candidate.Id == resource.Id);
+            var updatedPackage = XDocument.Load(packagePath);
+            Assert.DoesNotContain(updatedPackage.Descendants().Where(element => element.Name.LocalName == "item"),
+                element => (string?)element.Attribute("id") == resource.Id);
+
+            await service.SaveAsync(book, outputPath);
+            using var savedPackage = ZipFile.OpenRead(outputPath);
+            var savedOpf = XDocument.Parse(Encoding.UTF8.GetString(
+                await ReadEntryAsync(savedPackage, "OEBPS/content.opf")));
+            Assert.DoesNotContain(savedOpf.Descendants().Where(element => element.Name.LocalName == "item"),
+                element => (string?)element.Attribute("id") == resource.Id);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+            File.Delete(outputPath);
+        }
+    }
+
     [Fact]
     public async Task GeneratedTocUpdatesBothNavigationFormats()
     {
@@ -433,8 +545,27 @@ public sealed class EpubPackageServiceTests
 
         try
         {
-            var validIssues = await validator.ValidateAsync(fixturePath);
+            var progress = new RecordingProgress<EpubValidationProgress>();
+            var validIssues = await validator.ValidateAsync(fixturePath, progress: progress);
             Assert.DoesNotContain(validIssues, issue => issue.Severity == EpubIssueSeverity.Error);
+            Assert.Contains(progress.Values, update => update.Stage == EpubValidationStage.Archive);
+            Assert.Contains(progress.Values, update =>
+                update.Stage == EpubValidationStage.Manifest &&
+                update.Completed == update.Total);
+
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => validator.ValidateAsync(fixturePath, cancellation.Token));
+
+            using var progressCancellation = new CancellationTokenSource();
+            var cancellingProgress = new RecordingProgress<EpubValidationProgress>(update =>
+            {
+                if (update.Stage == EpubValidationStage.Archive)
+                    progressCancellation.Cancel();
+            });
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                validator.ValidateAsync(fixturePath, progressCancellation.Token, cancellingProgress));
 
             var invalidIssues = await validator.ValidateAsync(invalidPath);
             Assert.Contains(invalidIssues, issue => issue.Severity == EpubIssueSeverity.Error);
@@ -469,6 +600,33 @@ public sealed class EpubPackageServiceTests
         finally
         {
             File.Delete(epubPath);
+        }
+    }
+
+    [Fact]
+    public async Task ValidatorContinuesCheckingResourcesAfterMalformedNavigationXhtml()
+    {
+        var fixturePath = await CreateFixtureAsync(
+            "3.0",
+            malformedNavigationXhtml: true,
+            chapterReferencesMissingResource: true);
+
+        try
+        {
+            var issues = await new EpubValidator().ValidateAsync(fixturePath);
+
+            var malformedNavigation = Assert.Single(issues, issue =>
+                issue.Path == "OEBPS/nav.xhtml" && issue.Line.HasValue);
+            Assert.Equal(EpubIssueSeverity.Error, malformedNavigation.Severity);
+            Assert.True(malformedNavigation.Column > 0);
+            Assert.Contains(issues, issue =>
+                issue.Path == "OEBPS/Text/chapter.xhtml" &&
+                issue.Message.Contains("missing", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(issues, issue => issue.Path == fixturePath);
+        }
+        finally
+        {
+            File.Delete(fixturePath);
         }
     }
 
@@ -539,7 +697,13 @@ public sealed class EpubPackageServiceTests
         }
     }
 
-    private static async Task<string> CreateFixtureAsync(string version, bool includeSecondSection = false)
+    private static async Task<string> CreateFixtureAsync(
+        string version,
+        bool includeSecondSection = false,
+        bool coverNamedImage = false,
+        bool malformedXhtml = false,
+        bool malformedNavigationXhtml = false,
+        bool chapterReferencesMissingResource = false)
     {
         var path = Path.Combine(Path.GetTempPath(), $"fixture-{Guid.NewGuid():N}.epub");
         var packageDocument = version == "2.0"
@@ -564,17 +728,36 @@ public sealed class EpubPackageServiceTests
             ["META-INF/container.xml"] = Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\"><rootfiles><rootfile full-path=\"OEBPS/content.opf\" media-type=\"application/oebps-package+xml\"/></rootfiles></container>"),
             ["META-INF/rights.xml"] = Encoding.UTF8.GetBytes("<rights>Keep this unknown file</rights>"),
             ["OEBPS/content.opf"] = Encoding.UTF8.GetBytes(packageDocument),
-            ["OEBPS/Text/chapter.xhtml"] = Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>Chapter</title><link rel=\"stylesheet\" href=\"../Styles/book.css\" /></head><body><h1>Chapter</h1><p>Original paragraph</p><img src=\"../Images/sample.png\" alt=\"sample\" /></body></html>"),
+            ["OEBPS/Text/chapter.xhtml"] = Encoding.UTF8.GetBytes(chapterReferencesMissingResource
+                ? "<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>Chapter</title></head><body><h1>Chapter</h1><img src=\"../Images/missing.png\" /></body></html>"
+                : "<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>Chapter</title><link rel=\"stylesheet\" href=\"../Styles/book.css\" /></head><body><h1>Chapter</h1><p>Original paragraph</p><img src=\"../Images/sample.png\" alt=\"sample\" /></body></html>"),
             ["OEBPS/Images/sample.png"] = [137, 80, 78, 71, 13, 10, 26, 10],
             ["OEBPS/Styles/book.css"] = Encoding.UTF8.GetBytes("body { font-family: serif; }")
         };
+        if (malformedXhtml)
+        {
+            entries["OEBPS/Text/chapter.xhtml"] = Encoding.UTF8.GetBytes(
+                "<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head><title>Chapter</title></head>\n<body><h1>Chapter</h1>\n<p>Broken paragraph</body></html>");
+        }
+        if (coverNamedImage)
+        {
+            packageDocument = packageDocument.Replace("sample.png", "cover.png", StringComparison.Ordinal);
+            entries["OEBPS/content.opf"] = Encoding.UTF8.GetBytes(packageDocument);
+            entries["OEBPS/Text/chapter.xhtml"] = Encoding.UTF8.GetBytes(
+                Encoding.UTF8.GetString(entries["OEBPS/Text/chapter.xhtml"])
+                    .Replace("sample.png", "cover.png", StringComparison.Ordinal));
+            entries["OEBPS/Images/cover.png"] = entries["OEBPS/Images/sample.png"];
+            entries.Remove("OEBPS/Images/sample.png");
+        }
         if (version == "2.0")
         {
             entries["OEBPS/toc.ncx"] = Encoding.UTF8.GetBytes("<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\"><navMap/></ncx>");
         }
         else
         {
-            entries["OEBPS/nav.xhtml"] = Encoding.UTF8.GetBytes("<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><nav><ol><li><a href=\"Text/chapter.xhtml\">Chapter</a></li></ol></nav></body></html>");
+            entries["OEBPS/nav.xhtml"] = Encoding.UTF8.GetBytes(malformedNavigationXhtml
+                ? "<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<body><nav><p>Broken navigation</body></html>"
+                : "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><nav><ol><li><a href=\"Text/chapter.xhtml\">Chapter</a></li></ol></nav></body></html>");
         }
 
         if (includeSecondSection)
@@ -611,5 +794,16 @@ public sealed class EpubPackageServiceTests
         using var output = new MemoryStream();
         await stream.CopyToAsync(output);
         return output.ToArray();
+    }
+
+    private sealed class RecordingProgress<T>(Action<T>? onReport = null) : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
+            onReport?.Invoke(value);
+        }
     }
 }

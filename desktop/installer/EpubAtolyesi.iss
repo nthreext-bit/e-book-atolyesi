@@ -47,6 +47,35 @@ Filename: "{app}\EpubAtolyesi.exe"; Description: "{cm:LaunchProgram,{#AppName}}"
 const
   WebView2RuntimeClientKey = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
 
+var
+  RemoveUserDataOnUninstall: Boolean;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  RemoveUserDataOnUninstall :=
+    MsgBox(
+      'Uygulama ayarları, günlükler, kurtarma kopyaları ve WebView2 profili de silinsin mi? EPUB kitap dosyalarınız silinmez.',
+      mbConfirmation, MB_YESNO) = IDYES;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  RoamingDataPath: string;
+  LocalDataPath: string;
+begin
+  if (CurUninstallStep = usPostUninstall) and RemoveUserDataOnUninstall then
+  begin
+    RoamingDataPath := ExpandConstant('{userappdata}\EpubAtolyesi');
+    LocalDataPath := ExpandConstant('{localappdata}\EpubAtolyesi');
+    if DirExists(RoamingDataPath) and not DelTree(RoamingDataPath, True, True, True) then
+      MsgBox('Kullanıcı ayarları, günlükler veya kurtarma kopyaları silinemedi: ' + RoamingDataPath,
+        mbError, MB_OK);
+    if DirExists(LocalDataPath) and not DelTree(LocalDataPath, True, True, True) then
+      MsgBox('WebView2 kullanıcı verileri silinemedi: ' + LocalDataPath, mbError, MB_OK);
+  end;
+end;
+
 function IsWebView2RuntimeInstalled: Boolean;
 var
   Version: string;

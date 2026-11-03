@@ -20,7 +20,7 @@ Betik self-contained x64 uygulamayı tek dosya yerine tam yayın klasörü olara
 
 Çıktı: `desktop/installer/dist/EpubAtolyesi-Setup-x64-v<version>.exe`. Sürümü `-AppVersion` ile belirtebilirsiniz.
 
-Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kaldırıcı, kurulum klasöründeki uygulama tarafından oluşturulmuş dosyalar dahil tüm içerikleri ve alt klasörleri siler. Kullanıcı ayarları, günlükler, kurtarma kopyaları ve WebView2 profili kurulum klasörünün dışındaki kullanıcı klasörlerinde tutulur; kaldırma sırasında korunurlar. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar; eksikse Microsoft bootstrapper'ı kurar. Kurulum dışında çalıştırıldığında WebView2 bulunamazsa uygulama indirme bağlantılı uyarı paneli gösterir. GitHub Actions hem uygulama EXE'sini hem kurulum EXE'sini Authenticode ile imzalar ve self-signed sertifikanın açık anahtarını `.cer` olarak ekler. Self-signed imza Windows tarafından varsayılan olarak güvenilir sayılmaz; sertifikayı ayrıca güvenilir olarak yüklemek gerekir ve SmartScreen uyarısı yine görülebilir. CI her derlemede yeni, geçici bir sertifika üretir.
+Yükleyici yönetici izniyle uygulamayı `Program Files` altına kurar; Başlat menüsü ve isteğe bağlı masaüstü kısayolu oluşturur, kaldırma kaydı ekler ve kurulum sonunda uygulamayı başlatabilir. Kaldırıcı, kurulum klasöründeki uygulama tarafından oluşturulmuş dosyalar dahil tüm içerikleri ve alt klasörleri siler. Ayarlar, günlükler, kurtarma kopyaları ve WebView2 profili varsayılan olarak korunur. Kaldırma sırasında ayrıca sorulan isteğe bağlı onayla yalnızca uygulamanın `%AppData%\EpubAtolyesi` ve `%LocalAppData%\EpubAtolyesi` klasörleri silinir; EPUB kitap dosyaları silinmez. WebView2 Runtime zaten kuruluysa yeniden yüklemeyi atlar; eksikse Microsoft bootstrapper'ı kurar. Kurulum dışında çalıştırıldığında WebView2 bulunamazsa uygulama indirme bağlantılı uyarı paneli gösterir. GitHub Actions hem uygulama EXE'sini hem kurulum EXE'sini Authenticode ile imzalar ve self-signed sertifikanın açık anahtarını `.cer` olarak ekler. Self-signed imza Windows tarafından varsayılan olarak güvenilir sayılmaz; sertifikayı ayrıca güvenilir olarak yüklemek gerekir ve SmartScreen uyarısı yine görülebilir. CI her derlemede yeni, geçici bir sertifika üretir.
 
 Proje GNU General Public License v3.0 veya sonraki sürümleri kapsamında dağıtılır; ayrıntılar depo kökündeki [`LICENSE`](../LICENSE) dosyasındadır.
 
@@ -51,7 +51,9 @@ Uygulama hataları `%AppData%\EpubAtolyesi\logs` altına yazılır. Günlük olu
 
 - Kitap genelinde paragraf/karakter stilleri, XHTML kaynak düzenleme (AvalonEdit ile XML vurgulama) ve seçili öğe denetçisi.
 - EPUB 2/3 uyumlu kitap üst verileri ile yazar rolleri ve seri bilgisi.
-- Başlıklardan navigasyon/TOC üretme, bölüm ağacı ve kapak işaretleme.
+- Başlıklardan navigasyon/TOC üretme, bölüm ağacı ve EPUB 2/3 kapak işaretleme.
+- Sekmeli Office benzeri araç şeridi, doldurulmuş Biçim/Belge menüleri ve simgeli düzenleme paleti.
+- Kitaptaki görsellerden kapak seçme, kapak önizleme ve yeni görseli kapak olarak ekleme.
 - Büyük/küçük harf, tam kelime ve regex seçenekli bölüm veya kitap genelinde bul/değiştir.
 - İmleçten bölüm bölme, bölümleri birleştirme ve kullanılmayan paket dosyalarını bulma.
 - Yapıştırırken biçimi koruma, temizleme veya yalnızca metin olarak ekleme seçenekleri.
@@ -69,7 +71,13 @@ Kaynak görünümü için [AvalonEdit](https://github.com/icsharpcode/AvalonEdit
 
 ## Testler
 
-EPUB 2/3 paketleriyle değiştirmeden aç-kaydet-yeniden aç, bilinmeyen metadata koruma, XHTML düzenleme, spine sıralama, bölüm silme/yeniden adlandırma, yedekleme, paket doğrulama, içerik aktarımı ve kurtarma anlık görüntüsü testleri `desktop.Tests` projesinde bulunur.
+EPUB 2/3 paketleriyle değiştirmeden aç-kaydet-yeniden aç, bilinmeyen metadata koruma, XHTML düzenleme, spine sıralama, bölüm silme/yeniden adlandırma, yedekleme, paket doğrulama, içerik aktarımı, kurtarma anlık görüntüsü ve kitap işlemlerinin geri alma/yineleme testleri `desktop.Tests` projesinde bulunur. Ortak denetim testleri kural sırasını ve kimliklerini, ilerleme raporlamasını, iptali ve bozuk XHTML'den sonra taramanın sürmesini sentetik EPUB paketleriyle doğrular. Toplu düzenleme testleri başarılı geri alma/yineleme, hata/iptal sonrası geri sarma ve ilerleme bildirimini kapsar. Kitap işlemi geçmişi, WebView2 metin düzenleyicisinin kendi Geri Al/Yinele davranışından ayrıdır; birden fazla düzeltme tek bir geri alma adımı olarak gruplandırılabilir. “Kitabı denetle” doğrulaması arka plan iş parçacığında çalışır; sorun paneli arşiv ve manifest ilerlemesini gösterir, işlem iptal edilebilir. Toplu güvenli düzeltmeler de adım adım ilerler ve iptal edilirse tamamlanmış adımları geri alır. Sonuçlar önem düzeyine göre filtrelenebilir; bölüm dosyasına ait bir bulguya çift tıklamak o bölümü açar. Yalnızca uygulanabilir ve geri alınabilir düzeltmeler “Düzelt” eylemlerine sunulur.
+
+WebView2 görsel düzenleyicisinin sağ tık menüsü yerleşik seçim/clipboard/geri alma komutlarını korur ve Bul, Değiştir ile temel biçimlendirme seçeneklerini ekler. XHTML kaynak düzenleyicisinde AvalonEdit geri alma geçmişi, seçim ve clipboard durumuna göre uygun komutlar sunulur; bul/değiştir kitap arama işlevlerine bağlanır. Salt okunur dosya önizlemelerinde değiştirme komutları devre dışıdır.
+
+Dosya ağacındaki bölüm menüsü açma, yeniden adlandırma, silme, bölme ve sonraki bölümle birleştirme işlemlerini; kaynak menüleri türüne göre görsel önizleme/kapak yapma, metin kaynağını açma veya CSS düzenleme ve dışa aktarma işlemlerini sunar. Kaynak silme yalnızca uygulamanın taramasında kullanılmadığı doğrulanan kapak/nav/bölüm dışı manifest kaynaklarında gösterilir; silme öncesinde kullanım yeniden denetlenir.
+
+EPUB manifest'inde `application/xhtml+xml` olarak bildirilen içerik belgeleri EPUB uyumluluğu gereği DTD'leri kapalı, harici çözümleyicisi olmayan XML ayrıştırıcısıyla katı biçimde okunur; HTML'ye tolerans gösteren bir onarım ayrıştırıcısına geri düşülmez. Böylece bozuk etiketler ve tanımsız `&nbsp;` gibi XML entity'leri dosya/satır/sütun bulgusu olur. Başka medya türleri XHTML sayılmaz ve XML iyi biçimliliği kuralına sokulmaz. Bozuk XHTML, kitap denetiminde arşivden doğrudan okunur ve diğer bulguları durdurmaz; bulgu açıldığında bölüm ham kaynak modunda düzeltilebilir.
 
 ```powershell
 dotnet test desktop.Tests/EpubStudio.Tests.csproj --configuration Release

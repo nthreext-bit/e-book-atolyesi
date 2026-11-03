@@ -13,6 +13,18 @@
   <data name="Menu.Book" xml:space="preserve"><value>Kitap</value></data>
   <data name="Menu.View" xml:space="preserve"><value>Görünüm</value></data>
   <data name="Menu.Help" xml:space="preserve"><value>Yardım</value></data>
+  <data name="Ribbon.Home" xml:space="preserve"><value>Giriş</value></data>
+  <data name="Ribbon.Insert" xml:space="preserve"><value>Ekle</value></data>
+  <data name="Ribbon.Document" xml:space="preserve"><value>Belge</value></data>
+  <data name="Ribbon.Clipboard" xml:space="preserve"><value>Dosya ve geçmiş</value></data>
+  <data name="Ribbon.Formatting" xml:space="preserve"><value>Metin biçimi</value></data>
+  <data name="Ribbon.Paragraph" xml:space="preserve"><value>Paragraf</value></data>
+  <data name="Ribbon.Navigation" xml:space="preserve"><value>Gezinme</value></data>
+  <data name="Ribbon.Objects" xml:space="preserve"><value>Nesneler</value></data>
+  <data name="Ribbon.BookObjects" xml:space="preserve"><value>Kitap öğeleri</value></data>
+  <data name="Ribbon.Book" xml:space="preserve"><value>Kitap</value></data>
+  <data name="Ribbon.Section" xml:space="preserve"><value>Bölüm işlemleri</value></data>
+  <data name="Ribbon.View" xml:space="preserve"><value>Görünüm</value></data>
   <data name="File.New" xml:space="preserve"><value>Yeni EPUB</value></data>
   <data name="File.Recent" xml:space="preserve"><value>Son açılanlar</value></data>
   <data name="File.Backup" xml:space="preserve"><value>Kaydetmeden önce yedekle (.bak)</value></data>
@@ -33,6 +45,12 @@
   <data name="Tab.Build" xml:space="preserve"><value>Derle</value></data>
   <data name="Tab.Files" xml:space="preserve"><value>Dosyalar</value></data>
   <data name="Tab.Tools" xml:space="preserve"><value>Araçlar</value></data>
+  <data name="Tab.Cover" xml:space="preserve"><value>Kapak</value></data>
+  <data name="Cover.PickImage" xml:space="preserve"><value>Kapak olarak kullanılacak görseli seçin</value></data>
+  <data name="Cover.UseSelected" xml:space="preserve"><value>Kapak yap</value></data>
+  <data name="Cover.Replace" xml:space="preserve"><value>Yeni görsel ekle</value></data>
+  <data name="Cover.SelectImage" xml:space="preserve"><value>Önce kapak görseli seçin.</value></data>
+  <data name="Cover.NoSelection" xml:space="preserve"><value>Kapak görseli seçilmedi</value></data>
   <data name="Tab.Styles" xml:space="preserve"><value>Stiller</value></data>
   <data name="Tab.Objects" xml:space="preserve"><value>Nesneler</value></data>
   <data name="Tab.Inspector" xml:space="preserve"><value>Denetçi</value></data>
@@ -96,6 +114,17 @@
   <data name="Tree.RenameTitle" xml:space="preserve"><value>Bölümü Yeniden Adlandır</value></data>
   <data name="Tree.DeletePrompt" xml:space="preserve"><value>'{0}' bölümü silinsin mi?</value></data>
   <data name="Tree.DeleteTitle" xml:space="preserve"><value>Bölümü Sil</value></data>
+  <data name="Tree.Open" xml:space="preserve"><value>Aç</value></data>
+  <data name="Tree.Edit" xml:space="preserve"><value>Düzenle</value></data>
+  <data name="Tree.Preview" xml:space="preserve"><value>Önizle</value></data>
+  <data name="Tree.SetCover" xml:space="preserve"><value>Kapak yap</value></data>
+  <data name="Tree.Export" xml:space="preserve"><value>Dışa aktar...</value></data>
+  <data name="Tree.DeleteResource" xml:space="preserve"><value>Kullanılmayan kaynağı sil</value></data>
+  <data name="Tree.DeleteResourcePrompt" xml:space="preserve"><value>“{0}” kullanılmayan kaynak olarak EPUB'tan silinsin mi?</value></data>
+  <data name="Tree.ExportComplete" xml:space="preserve"><value>Kaynak dışa aktarıldı: {0}</value></data>
+  <data name="Tree.ResourceMissing" xml:space="preserve"><value>EPUB kaynağı bulunamadı.</value></data>
+  <data name="Tree.StylesheetEditUnavailable" xml:space="preserve"><value>Bu stil dosyası artık düzenlenebilir kaynak değil.</value></data>
+  <data name="Dialog.AllFilesFilter" xml:space="preserve"><value>Tüm dosyalar|*.*</value></data>
   <data name="Unsaved.Prompt" xml:space="preserve"><value>Kaydedilmemiş değişiklikler var. Kaydetmek ister misiniz?</value></data>
   <data name="Unsaved.Title" xml:space="preserve"><value>Kaydedilmemiş değişiklikler</value></data>
   <data name="Errors.AppTitle" xml:space="preserve"><value>Uygulama hatası</value></data>
@@ -132,6 +161,7 @@ Pencereyi seçip Ctrl+C ile hata metnini kopyalayabilirsiniz.</value></data>
   <data name="Tools.EditorCommandError" xml:space="preserve"><value>Komut uygulanamadı: {0}</value></data>
   <data name="Tools.MessageError" xml:space="preserve"><value>Düzenleyici iletisi işlenemedi: {0}</value></data>
   <data name="Tools.LoadSectionError" xml:space="preserve"><value>Bölüm düzenleyiciye yüklenemedi: {0}</value></data>
+  <data name="Editor.MalformedSource" xml:space="preserve"><value>{0} bölümü geçerli XHTML değil; ham kaynak görünümünde açıldı. Düzelttikten sonra Görsel düzenleyici'ye geçebilir veya kaydedebilirsiniz. XML hatası: {1}</value></data>
   <data name="Tools.OpenError" xml:space="preserve"><value>EPUB açılamadı: {0}</value></data>
   <data name="Tools.SaveError" xml:space="preserve"><value>Kitap kaydedilemedi: {0}</value></data>
   <data name="Tools.DeleteError" xml:space="preserve"><value>Bölüm silinemedi: {0}</value></data>
@@ -159,6 +189,7 @@ Pencereyi seçip Ctrl+C ile hata metnini kopyalayabilirsiniz.</value></data>
   <data name="Status.SectionsLoaded" xml:space="preserve"><value>{0} bölüm yüklendi.</value></data>
   <data name="Status.NewBook" xml:space="preserve"><value>Yeni EPUB oluşturuldu. Kaydetmek için Ctrl+S kullanın.</value></data>
   <data name="Status.NoBookToSave" xml:space="preserve"><value>Kaydedilecek bir EPUB açık değil.</value></data>
+  <data name="Status.NoBookToEdit" xml:space="preserve"><value>Düzenlenecek bir EPUB açık değil.</value></data>
   <data name="Status.Unsaved" xml:space="preserve"><value>Kaydedilmemiş değişiklikler var.</value></data>
   <data name="Dialog.OpenEpub" xml:space="preserve"><value>EPUB kitabı aç</value></data>
   <data name="Dialog.SaveEpub" xml:space="preserve"><value>EPUB kitabını kaydet</value></data>
@@ -205,7 +236,9 @@ Pencereyi seçip Ctrl+C ile hata metnini kopyalayabilirsiniz.</value></data>
   <data name="Tools.ReplaceCount" xml:space="preserve"><value>{0} eşleşme değiştirildi.</value></data>
   <data name="Tools.SearchCount" xml:space="preserve"><value>{0} arama sonucu bulundu.</value></data>
   <data name="Book.Metadata" xml:space="preserve"><value>Kitap üst verileri...</value></data>
+  <data name="Book.OpenCoverEditor" xml:space="preserve"><value>Kapak düzenleyicisini aç</value></data>
   <data name="Book.GenerateToc" xml:space="preserve"><value>Başlıklardan içindekiler oluştur</value></data>
+  <data name="Book.OpenTocEditor" xml:space="preserve"><value>İçindekiler düzenleyicisini aç</value></data>
   <data name="Book.SplitSection" xml:space="preserve"><value>İmleçten böl...</value></data>
   <data name="Book.MergeSection" xml:space="preserve"><value>Sonraki bölümle birleştir</value></data>
   <data name="Toc.MoveUp" xml:space="preserve"><value>Yukarı taşı</value></data>
@@ -280,6 +313,32 @@ Pencereyi seçip Ctrl+C ile hata metnini kopyalayabilirsiniz.</value></data>
   <data name="Validation.Error" xml:space="preserve"><value>HATA</value></data>
   <data name="Validation.Warning" xml:space="preserve"><value>UYARI</value></data>
   <data name="Validation.Information" xml:space="preserve"><value>BİLGİ</value></data>
+  <data name="Issues.Title" xml:space="preserve"><value>Denetim sorunları</value></data>
+  <data name="Issues.Close" xml:space="preserve"><value>Sorun panelini kapat</value></data>
+  <data name="Issues.FilterAll" xml:space="preserve"><value>Tüm önem düzeyleri</value></data>
+  <data name="Issues.Severity" xml:space="preserve"><value>Önem</value></data>
+  <data name="Issues.Rule" xml:space="preserve"><value>Kural</value></data>
+  <data name="Issues.File" xml:space="preserve"><value>Dosya</value></data>
+  <data name="Issues.Line" xml:space="preserve"><value>Satır</value></data>
+  <data name="Issues.Column" xml:space="preserve"><value>Sütun</value></data>
+  <data name="Issues.Message" xml:space="preserve"><value>İleti</value></data>
+  <data name="Issues.Fix" xml:space="preserve"><value>Düzelt</value></data>
+  <data name="Issues.FixAll" xml:space="preserve"><value>Tümünü düzelt</value></data>
+  <data name="Issues.Cancel" xml:space="preserve"><value>İptal</value></data>
+  <data name="Issues.Cancelled" xml:space="preserve"><value>EPUB denetimi iptal edildi.</value></data>
+  <data name="Issues.OperationCancelled" xml:space="preserve"><value>İşlem iptal edildi.</value></data>
+  <data name="Issues.FixesCancelled" xml:space="preserve"><value>Düzeltmeler iptal edildi; tamamlanan adımlar geri alındı.</value></data>
+  <data name="Issues.PreparingValidation" xml:space="preserve"><value>Denetim hazırlanıyor…</value></data>
+  <data name="Issues.PreparingFixes" xml:space="preserve"><value>Güvenli düzeltmeler hazırlanıyor…</value></data>
+  <data name="Issues.ApplyingFix" xml:space="preserve"><value>Düzeltme uygulanıyor…</value></data>
+  <data name="Issues.StageArchive" xml:space="preserve"><value>Arşiv taranıyor</value></data>
+  <data name="Issues.StageManifest" xml:space="preserve"><value>Kaynaklar denetleniyor</value></data>
+  <data name="Issues.ProgressArchive" xml:space="preserve"><value>{0} ({1}/{2}): {3}</value></data>
+  <data name="Issues.ProgressManifest" xml:space="preserve"><value>{0} ({1}/{2}): {3}</value></data>
+  <data name="Issues.ProgressFixes" xml:space="preserve"><value>Düzeltmeler uygulanıyor ({0}/{1}): {2}</value></data>
+  <data name="Issues.FileNotText" xml:space="preserve"><value>Yalnızca EPUB içindeki güvenli metin dosyaları açılabilir.</value></data>
+  <data name="Issues.FileNotFound" xml:space="preserve"><value>İlgili EPUB dosyası bulunamadı.</value></data>
+  <data name="Issues.FileTooLarge" xml:space="preserve"><value>Dosya önizleme için çok büyük (32 MB sınırı).</value></data>
   <data name="Recovery.Prompt" xml:space="preserve"><value>Kaydedilmemiş “{0}” kitabının kurtarma kopyası bulundu ({1:g}). Kurtarılsın mı?</value></data>
   <data name="Recovery.Restored" xml:space="preserve"><value>“{0}” kurtarma kopyasından yüklendi. Değişiklikleri korumak için kitabı kaydedin.</value></data>
   <data name="Recovery.SaveError" xml:space="preserve"><value>Kurtarma kopyası oluşturulamadı: {0}</value></data>
@@ -305,6 +364,7 @@ Pencereyi seçip Ctrl+C ile hata metnini kopyalayabilirsiniz.</value></data>
   <data name="Validation.ManifestResourceMissing" xml:space="preserve"><value>Manifest kaynağı arşivde bulunamadı.</value></data>
   <data name="Validation.XhtmlRootMissing" xml:space="preserve"><value>XHTML kaynağında html belge öğesi bulunmalıdır.</value></data>
   <data name="Validation.XhtmlBodyMissing" xml:space="preserve"><value>XHTML kaynağında body öğesi bulunamadı.</value></data>
+  <data name="Validation.XhtmlMalformed" xml:space="preserve"><value>XHTML iyi biçimli XML değil: {0}</value></data>
   <data name="Validation.SpineReferenceMissing" xml:space="preserve"><value>Spine içindeki “{0}” başvurusu manifest öğesine bağlı değil.</value></data>
   <data name="Validation.NavigationMissing" xml:space="preserve"><value>EPUB 3 paketinde bir gezinme belgesi tanımlanmalıdır.</value></data>
   <data name="Validation.PackageReadError" xml:space="preserve"><value>EPUB denetlenemedi: {0}</value></data>

@@ -60,7 +60,7 @@ npm run build
 
 ## Testler
 
-EPUB2 ve EPUB3 örnek paketleriyle değiştirmeden aç-kaydet-yeniden aç, bilinmeyen OPF/arşiv verisini koruma, XHTML düzenleme, resim ekleme, bölüm sıralama/silme/yeniden adlandırma ve yedekleme testleri:
+EPUB2 ve EPUB3 için test paketleri `desktop.Tests/Fixtures` içindeki üretim notlarına göre sentetik olarak oluşturulur. Değiştirmeden aç-kaydet-yeniden aç, bilinmeyen OPF/arşiv verisini koruma, XHTML düzenleme, bozuk XHTML'i ham kaynakta onarma, resim ekleme, bölüm sıralama/silme/yeniden adlandırma ve yedekleme testleri:
 
 ```powershell
 dotnet test desktop.Tests/EpubStudio.Tests.csproj --configuration Release

@@ -10,4 +10,6 @@ public enum EpubIssueSeverity
 public sealed record EpubValidationIssue(
     EpubIssueSeverity Severity,
     string Path,
-    string Message);
+    string Message,
+    int? Line = null,
+    int? Column = null);
